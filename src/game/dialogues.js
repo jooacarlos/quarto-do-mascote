@@ -181,5 +181,122 @@ export const DIALOGUES = {
     duration: 3800,
     priority: 12,
     cooldown: 6000
+  },
+  workStart: {
+    speaker: 'Mbranco',
+    text: 'Bora pro CEASA, boi! Primeiro pega o busão no ponto.',
+    duration: 3600,
+    priority: 26,
+    gesture: 'talk'
+  },
+  workStreet: {
+    speaker: 'Mbranco',
+    text: 'O ponto é logo ali. O 101 Downtown passa nessa rua.',
+    duration: 3400,
+    priority: 12,
+    cooldown: 9000,
+    gesture: 'talk'
+  },
+  workBusWaiting: {
+    speaker: 'Mbranco',
+    text: 'O busão tá chegando. Melhor chegar perto da porta.',
+    duration: 3200,
+    priority: 16,
+    gesture: 'talk'
+  },
+  workBusBoard: {
+    speaker: 'Mbranco',
+    text: 'Embarcando! CEASA, aqui vou eu.',
+    duration: 2800,
+    priority: 20,
+    gesture: 'talk'
+  },
+  workArriveCeasa: {
+    speaker: 'Mbranco',
+    text: 'Desembarquei. Agora é só entrar no galpão e bater o ponto.',
+    duration: 3800,
+    priority: 20,
+    gesture: 'talk'
+  },
+  clockIn: {
+    speaker: 'Mbranco',
+    text: 'Entrada registrada. Agora vou procurar o encarregado.',
+    duration: 3600,
+    priority: 20,
+    gesture: 'talk'
+  },
+  clockAlreadyIn: {
+    speaker: 'Mbranco',
+    text: 'A entrada já foi registrada, boi. Bora trabalhar.',
+    duration: 3000,
+    priority: 8,
+    cooldown: 5000
+  },
+  clockBeforeTask: {
+    speaker: 'Mbranco',
+    text: 'Primeiro bate o ponto e fala com o encarregado.',
+    duration: 3200,
+    priority: 10,
+    cooldown: 5000
+  },
+  managerTask: {
+    speaker: 'Seu Nilton',
+    text: 'Chegou na hora, Mbranco. Descarrega 8 caixas do caminhão e leva cada uma pro setor certo.',
+    duration: 5200,
+    priority: 20
+  },
+  managerWorking: {
+    speaker: 'Seu Nilton',
+    text: 'Tô vendo o movimento. Tomate é na área vermelha, folha na verde e banana na frutas.',
+    duration: 4600,
+    priority: 12,
+    cooldown: 9000
+  },
+  managerDone: {
+    speaker: 'Seu Nilton',
+    text: 'Fechou a carga! Agora volta no relógio e bate a saída.',
+    duration: 4000,
+    priority: 20
+  },
+  managerPaid: {
+    speaker: 'Seu Nilton',
+    text: 'Bom descanso, boi. O dinheiro já caiu. Amanhã tem mais.',
+    duration: 3800,
+    priority: 12,
+    cooldown: 8000
+  },
+  coworkerLia: {
+    speaker: 'Lia',
+    text: 'Hoje o caminhão veio cheio. Confere o setor antes de soltar a caixa, viu?',
+    duration: 4200,
+    priority: 9,
+    cooldown: 9000
+  },
+  coworkerDavi: {
+    speaker: 'Davi',
+    text: 'Se errar a área, é só voltar e tentar de novo. Ninguém nasce sabendo.',
+    duration: 4200,
+    priority: 9,
+    cooldown: 9000
+  },
+  coworkerRita: {
+    speaker: 'Rita',
+    text: 'Essa caixa de banana vai em Frutas. As verdes são alfaces, não confunde.',
+    duration: 4600,
+    priority: 9,
+    cooldown: 9000
+  },
+  ceasaDone: {
+    speaker: 'Mbranco',
+    text: 'Expediente concluído! Salário na conta e a Duck tá me esperando.',
+    duration: 4400,
+    priority: 30
+  },
+  noMoney: {
+    speaker: 'Mbranco',
+    text: 'Saldo insuficiente, boi. Melhor voltar pro CEASA e fazer mais um turno.',
+    duration: 3400,
+    priority: 14,
+    cooldown: 4000
   }
 }

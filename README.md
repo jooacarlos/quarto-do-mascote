@@ -93,3 +93,39 @@ O deploy de produção usa o `netlify.toml`; depois de instalar o Netlify CLI, r
 ```bash
 npm run deploy
 ```
+
+
+## Trabalho no CEASA
+
+O ciclo completo agora inclui **Quarto -> ponto de ônibus -> CEASA -> Duck**. O botão **Ir Trabalhar** aparece no quarto e inicia o expediente. Se a página for recarregada no meio de um turno já registrado, o botão retoma o trabalho no galpão preservando as caixas entregues.
+
+### Controles do trabalho
+
+- **WASD** ou **setas** para andar; o personagem respeita paredes, displays, caminhão e limites do cenário.
+- **E** ou **Interagir** quando o aviso de interação aparecer.
+- Clique/toque nos objetos, colegas e áreas do galpão também interage quando o Mbranco está perto.
+- No celular, use o direcional na tela; ele não cobre os botões de interação.
+
+### Fluxo do expediente
+
+1. Sair do quarto e esperar o ônibus 101 no ponto (a parada é automática ao chegar perto).
+2. Embarcar pela porta dianteira (a porta também aciona o embarque ao se aproximar).
+3. Desembarcar, entrar no galpão e bater o ponto.
+4. Falar com Seu Nilton para receber a tarefa de **8 caixas**.
+5. Pegar uma caixa no caminhão e levá-la ao setor correto: **Tomate**, **Folhas** ou **Frutas**.
+6. Repetir até 8/8, bater a saída e receber **$ 150** uma única vez.
+7. Escolher voltar para casa ou ir para a Duck.
+
+O saldo, o progresso do turno, as compras e os convidados ficam em `localStorage` na chave `mbranco.ceasa.save.v1`. Não há dois saldos: o mesmo valor é usado no CEASA e na Duck.
+
+### Bar e camarote
+
+- O menu do bar vende gin, caipirinha, cerveja e água usando o saldo virtual.
+- O camarote permite convidar Bia, João caga grosso e Miguel bigode; os convidados aparecem no cenário e ficam salvos.
+- Compras com saldo insuficiente são recusadas e não deixam o saldo negativo.
+
+### Limitações conhecidas
+
+- Não existe sprite dedicado de Mbranco carregando caixa; a caixa é um overlay que acompanha o corpo usando os frames de idle/walk existentes.
+- O ônibus e a porta de embarque usam o cenário ilustrado, com marcadores e transições em Phaser; não há sprite separado do veículo.
+- Maçãs e laranjas aparecem nos cenários, mas a tarefa usa tomate, alface e banana. O asset de cenoura existe e fica reservado para uma expansão.

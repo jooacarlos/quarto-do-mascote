@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "assets": "node scripts/process-assets.mjs && node scripts/process-v2-assets.mjs",
+    "assets": "node scripts/process-assets.mjs && node scripts/process-v2-assets.mjs && node scripts/process-ceasa-assets.mjs",
     "deploy": "npm run build && netlify deploy --prod --dir=dist --no-build"
   },
   "dependencies": {

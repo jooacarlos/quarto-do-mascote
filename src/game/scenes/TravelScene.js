@@ -130,7 +130,7 @@ export default class TravelScene extends Phaser.Scene {
       this.cameras.main.fadeOut(480, 5, 2, 8)
       this.cameras.main.once('camerafadeoutcomplete', () => {
         this.scene.start(this.target, {
-          from: goingToDuck ? 'bedroom' : 'duck',
+          from: this.from,
           fromTravel: true,
           area: this.area
         })

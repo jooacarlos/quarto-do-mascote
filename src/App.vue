@@ -1,9 +1,10 @@
 <script setup>
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import GameCanvas from './components/GameCanvas.vue'
 import { EVENTS } from './game/events.js'
 import { gameBus } from './game/bus.js'
 import { AREA_LABELS } from './game/constants.js'
+import { DRINKS, GUESTS, buyDrink, gameState, inviteGuest } from './game/state.js'
 
 const ready = ref(false)
 const characterState = ref('idle')
@@ -13,6 +14,11 @@ const dialogue = ref(null)
 const world = ref({ scene: 'bedroom', area: 'bedroom', traveling: false })
 const areaTransition = ref(false)
 const travelDirection = ref(null)
+const workState = ref(null)
+const workPrompt = ref('')
+const shopMode = ref(null)
+const payment = ref(null)
+const activeTouches = new Set()
 let toastTimer = null
 let dialogueTimer = null
 
@@ -33,12 +39,7 @@ const unsubscribers = [
     soundOn.value = enabled
   }),
   gameBus.on(EVENTS.TOAST, (message) => {
-    toast.value = message
-    if (toastTimer) clearTimeout(toastTimer)
-    toastTimer = setTimeout(() => {
-      toast.value = ''
-      toastTimer = null
-    }, 2400)
+    showToast(message)
   }),
   gameBus.on(EVENTS.DIALOGUE, (payload) => {
     dialogue.value = payload
@@ -59,25 +60,45 @@ const unsubscribers = [
       area: location.area ?? world.value.area,
       traveling: false
     }
+    if (location.scene !== 'work') {
+      workState.value = null
+    }
+    workPrompt.value = ''
+    toast.value = ''
     areaTransition.value = false
     travelDirection.value = null
   }),
   gameBus.on(EVENTS.TRAVEL_STATE, (payload) => {
     if (payload.phase === 'leaving' || payload.phase === 'traveling') {
       const targetScene =
-        payload.target === 'bedroom' ? 'bedroom' : payload.target === 'duck' ? 'duck' : world.value.scene
+        payload.target === 'bedroom'
+          ? 'bedroom'
+          : payload.target === 'duck'
+            ? 'duck'
+            : 'work'
+      const targetArea =
+        targetScene === 'bedroom'
+          ? 'bedroom'
+          : targetScene === 'duck'
+            ? world.value.area === 'bedroom'
+              ? 'dance'
+              : world.value.area
+            : payload.from === 'ceasa'
+              ? 'ceasa'
+              : 'street'
       world.value = {
         scene: targetScene,
-        area:
-          targetScene === 'bedroom'
-            ? 'bedroom'
-            : world.value.area === 'bedroom'
-              ? 'dance'
-              : world.value.area,
+        area: targetArea,
         traveling: true
       }
-      travelDirection.value = payload.target === 'bedroom' ? 'to-bedroom' : 'to-duck'
+      travelDirection.value =
+        payload.target === 'bedroom'
+          ? 'to-bedroom'
+          : payload.target === 'duck'
+            ? 'to-duck'
+            : 'to-work'
       areaTransition.value = true
+      closeShop()
     }
   }),
   gameBus.on(EVENTS.AREA_STATE, (payload) => {
@@ -85,26 +106,51 @@ const unsubscribers = [
     if (payload.area) {
       world.value = { ...world.value, area: payload.area, traveling: false }
     }
+  }),
+  gameBus.on(EVENTS.WORK_STATE, (payload) => {
+    workState.value = payload
+  }),
+  gameBus.on(EVENTS.WORK_PROMPT, (payload) => {
+    workPrompt.value = payload?.text ?? ''
+  }),
+  gameBus.on(EVENTS.SHIFT_PAID, (payload) => {
+    payment.value = payload
+    closeShop()
+  }),
+  gameBus.on(EVENTS.OPEN_DRINK_MENU, () => {
+    shopMode.value = 'drinks'
+  }),
+  gameBus.on(EVENTS.OPEN_GUEST_MENU, () => {
+    shopMode.value = 'guests'
   })
 ]
 
 const isDuck = computed(() => world.value.scene === 'duck')
+const isWork = computed(() => world.value.scene === 'work')
+const isHome = computed(() => world.value.scene === 'bedroom')
 const areaLabel = computed(() => AREA_LABELS[world.value.area] ?? 'Duck')
-const portraitTitle = computed(() => (isDuck.value ? 'Duck Nightclub' : 'Quarto do Mascote'))
-const portraitKicker = computed(() => (isDuck.value ? 'balada virtual' : 'mascote virtual'))
+const portraitTitle = computed(() =>
+  isDuck.value ? 'Duck Nightclub' : isWork.value ? 'CEASA' : 'Quarto do Mascote'
+)
+const portraitKicker = computed(() =>
+  isDuck.value ? 'balada virtual' : isWork.value ? 'trabalho virtual' : 'mascote virtual'
+)
 const isActive = computed(
-  () =>
-    characterState.value !== 'idle' ||
-    world.value.traveling ||
-    areaTransition.value
+  () => characterState.value !== 'idle' || world.value.traveling || areaTransition.value
 )
 
 const statusText = computed(() => {
   if (!ready.value) return 'Preparando o quarto...'
   if (world.value.traveling) {
-    return travelDirection.value === 'to-bedroom' ? 'Voltando para o quarto...' : 'Indo para a Duck...'
+    if (travelDirection.value === 'to-bedroom') return 'Voltando para o quarto...'
+    if (travelDirection.value === 'to-work') return 'Indo para o trabalho...'
+    return 'Indo para a Duck...'
   }
   if (areaTransition.value) return 'Mudando de área...'
+
+  if (isWork.value) {
+    return workState.value?.title ?? 'Trabalhando no CEASA'
+  }
 
   if (isDuck.value) {
     if (characterState.value === 'dancing') return 'Dançando na Duck'
@@ -126,9 +172,15 @@ const statusText = computed(() => {
 
 const hintText = computed(() => {
   if (world.value.traveling) return 'Preparando a próxima parada...'
+  if (isWork.value) {
+    if (workPrompt.value) return workPrompt.value
+    return workState.value?.detail ?? 'WASD, setas ou o direcional para andar.'
+  }
   if (isDuck.value) {
-    if (world.value.area === 'bar') return 'Toque no gin para pedir uma bebida'
-    if (world.value.area === 'vip') return 'Toque no camarote para brindar'
+    if (world.value.area === 'bar') return 'Abra o menu do bar para comprar uma bebida'
+    if (world.value.area === 'vip') {
+      return `${gameState.guests.length} convidado(s) no camarote. Convide mais ou brinde.`
+    }
     return 'Toque na pista, no DJ, no globo ou nos NPCs'
   }
   return 'Toque no personagem, no abajur, na cama ou na janela'
@@ -144,10 +196,10 @@ const contextAction = computed(() => {
     }
   }
   if (world.value.area === 'bar') {
-    return { id: 'bar', label: 'Pedir gin', icon: 'glass' }
+    return { id: 'bar', label: 'Menu do bar', icon: 'glass' }
   }
   if (world.value.area === 'vip') {
-    return { id: 'vip', label: 'Brindar', icon: 'sparkle' }
+    return { id: 'vip', label: 'Convidar', icon: 'sparkle' }
   }
   return null
 })
@@ -177,20 +229,55 @@ const clubDisabled = computed(
     ['walking', 'drinking'].includes(characterState.value)
 )
 
+const workDisabled = computed(
+  () => !ready.value || isWork.value || isDuck.value || world.value.traveling || areaTransition.value
+)
+
 const contextDisabled = computed(() => {
   if (!contextAction.value || travelDisabled.value) return true
   if (characterState.value === 'dancing' && contextAction.value.id !== 'dance') return true
   return false
 })
 
+const workControlsVisible = computed(
+  () => isWork.value && workState.value?.controls !== false && !world.value.traveling
+)
+
+const progressPercent = computed(() => {
+  const progress = workState.value?.progress
+  if (!progress?.required) return 0
+  return Math.min(100, Math.round((progress.delivered / progress.required) * 100))
+})
+
+const shopTitle = computed(() => (shopMode.value === 'drinks' ? 'Bar da Duck' : 'Camarote da Duck'))
+const shopKicker = computed(() =>
+  shopMode.value === 'drinks' ? 'BEBIDAS VIRTUAIS' : 'CONVIDADOS VIRTUAIS'
+)
+const shopEntries = computed(() => (shopMode.value === 'drinks' ? DRINKS : GUESTS))
+
+function showToast(message) {
+  toast.value = message
+  if (toastTimer) clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => {
+    toast.value = ''
+    toastTimer = null
+  }, 2400)
+}
+
 function requestWave() {
-  if (!ready.value || isDuck.value) return
+  if (!ready.value || isDuck.value || isWork.value) return
   gameBus.emit(EVENTS.REQUEST_WAVE)
 }
 
 function requestClub() {
-  if (clubDisabled.value || isDuck.value) return
+  if (clubDisabled.value || isDuck.value || isWork.value) return
   gameBus.emit(EVENTS.REQUEST_CLUB)
+}
+
+function requestWork() {
+  if (workDisabled.value) return
+  closeShop()
+  gameBus.emit(EVENTS.REQUEST_WORK)
 }
 
 function requestReturn() {
@@ -200,6 +287,7 @@ function requestReturn() {
 
 function requestArea(area) {
   if (travelDisabled.value || !isDuck.value || area === world.value.area) return
+  closeShop()
   gameBus.emit(EVENTS.REQUEST_AREA, area)
 }
 
@@ -213,12 +301,91 @@ function requestTalk() {
   gameBus.emit(EVENTS.REQUEST_TALK)
 }
 
+function requestWorkInteract() {
+  if (!isWork.value || world.value.traveling) return
+  gameBus.emit(EVENTS.REQUEST_WORK_INTERACT)
+}
+
 function toggleSound() {
   if (!ready.value) return
   gameBus.emit(EVENTS.TOGGLE_SOUND)
 }
 
+function emitTouchMove() {
+  const x =
+    (activeTouches.has('right') ? 1 : 0) - (activeTouches.has('left') ? 1 : 0)
+  const y =
+    (activeTouches.has('down') ? 1 : 0) - (activeTouches.has('up') ? 1 : 0)
+  gameBus.emit(EVENTS.WORK_MOVE, { x, y })
+}
+
+function pressMove(direction, event) {
+  event.preventDefault()
+  activeTouches.add(direction)
+  try {
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+  } catch {
+    // captura indisponível em alguns navegadores
+  }
+  emitTouchMove()
+}
+
+function releaseMove(direction, event) {
+  event?.preventDefault?.()
+  activeTouches.delete(direction)
+  emitTouchMove()
+}
+
+function clearTouches() {
+  if (activeTouches.size === 0) return
+  activeTouches.clear()
+  emitTouchMove()
+}
+
+function closeShop() {
+  shopMode.value = null
+}
+
+function buySelectedDrink(drink) {
+  const result = buyDrink(drink.id)
+  if (!result.ok) {
+    showToast(result.reason)
+    return
+  }
+  showToast(`${result.drink.name} comprado por $${result.drink.price}.`)
+  closeShop()
+  gameBus.emit(EVENTS.DUCK_DRINK_BOUGHT, { drink: result.drink })
+}
+
+function inviteSelectedGuest(guest) {
+  const result = inviteGuest(guest.id)
+  if (!result.ok) {
+    showToast(result.reason)
+    return
+  }
+  showToast(`${result.guest.name} foi convidado por ${result.guest.price}.`)
+  closeShop()
+  gameBus.emit(EVENTS.DUCK_GUEST_INVITED, { guest: result.guest })
+}
+
+function isGuestInvited(id) {
+  return gameState.guests.includes(id)
+}
+
+function leaveWork(target) {
+  payment.value = null
+  gameBus.emit(EVENTS.REQUEST_WORK_RETURN, target)
+}
+
+watch(
+  () => [world.value.scene, world.value.area],
+  () => {
+    closeShop()
+  }
+)
+
 onBeforeUnmount(() => {
+  clearTouches()
   for (const unsubscribe of unsubscribers) unsubscribe()
   if (toastTimer) clearTimeout(toastTimer)
   if (dialogueTimer) clearTimeout(dialogueTimer)
@@ -234,7 +401,7 @@ onBeforeUnmount(() => {
       <span class="portrait-title">{{ portraitTitle }}</span>
     </header>
 
-    <section class="game-frame" :class="{ 'is-duck': isDuck }" aria-label="Aventura do mascote">
+    <section class="game-frame" :class="{ 'is-duck': isDuck, 'is-work': isWork, 'has-dialogue': dialogue }" aria-label="Aventura do mascote">
       <GameCanvas />
 
       <div class="hud">
@@ -244,8 +411,13 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="venue-badge" aria-hidden="true">
-          <span class="venue-kicker">{{ isDuck ? 'Duck Nightclub' : 'mascote virtual' }}</span>
-          <span class="venue-name">{{ isDuck ? areaLabel : 'Quarto do Mascote' }}</span>
+          <span class="venue-kicker">{{ isDuck ? 'Duck Nightclub' : isWork ? 'CEASA' : 'mascote virtual' }}</span>
+          <span class="venue-name">{{ isDuck || isWork ? areaLabel : 'Quarto do Mascote' }}</span>
+        </div>
+
+        <div class="wallet-chip" aria-label="Saldo virtual">
+          <span>Saldo</span>
+          <strong>$ {{ gameState.balance }}</strong>
         </div>
 
         <button
@@ -290,8 +462,47 @@ onBeforeUnmount(() => {
           </div>
         </Transition>
 
+        <Transition name="fade">
+          <aside v-if="isWork && workState" class="work-panel" aria-live="polite">
+            <span class="work-kicker">CEASA • EXPEDIENTE</span>
+            <strong>{{ workState.title }}</strong>
+            <p>{{ workState.objective }}</p>
+            <div v-if="workState.progress" class="work-progress">
+              <div class="work-progress-head">
+                <span>Caixas entregues</span>
+                <b>{{ workState.progress.delivered }}/{{ workState.progress.required }}</b>
+              </div>
+              <span class="work-progress-track">
+                <span :style="{ width: progressPercent + '%' }"></span>
+              </span>
+            </div>
+            <small>{{ workState.detail }}</small>
+          </aside>
+        </Transition>
+
+        <div v-if="isWork && workPrompt" class="work-prompt">{{ workPrompt }}</div>
+
         <div v-if="!world.traveling" class="action-bar">
-          <template v-if="!isDuck">
+          <template v-if="isHome">
+            <button
+              class="action-button work-button"
+              type="button"
+              :disabled="workDisabled"
+              @click="requestWork"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M4 8.5h16v11H4zM9 8.5V6.2A1.2 1.2 0 0 1 10.2 5h3.6A1.2 1.2 0 0 1 15 6.2v2.3M4 12h16M10 12v2h4v-2"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+              <span>Ir Trabalhar</span>
+            </button>
+
             <button
               class="action-button ghost"
               type="button"
@@ -353,7 +564,7 @@ onBeforeUnmount(() => {
             </button>
           </template>
 
-          <template v-else>
+          <template v-else-if="isDuck">
             <button
               class="action-button ghost"
               type="button"
@@ -450,6 +661,55 @@ onBeforeUnmount(() => {
 
         <p class="hint">{{ hintText }}</p>
 
+        <div v-if="workControlsVisible" class="work-controls" aria-label="Controles de movimento">
+          <div class="dpad">
+            <button
+              class="dpad-button up"
+              type="button"
+              aria-label="Andar para cima"
+              @pointerdown="pressMove('up', $event)"
+              @pointerup="releaseMove('up', $event)"
+              @pointercancel="releaseMove('up', $event)"
+              @pointerleave="releaseMove('up', $event)"
+            >▲</button>
+            <button
+              class="dpad-button left"
+              type="button"
+              aria-label="Andar para a esquerda"
+              @pointerdown="pressMove('left', $event)"
+              @pointerup="releaseMove('left', $event)"
+              @pointercancel="releaseMove('left', $event)"
+              @pointerleave="releaseMove('left', $event)"
+            >◀</button>
+            <span class="dpad-center" aria-hidden="true"></span>
+            <button
+              class="dpad-button right"
+              type="button"
+              aria-label="Andar para a direita"
+              @pointerdown="pressMove('right', $event)"
+              @pointerup="releaseMove('right', $event)"
+              @pointercancel="releaseMove('right', $event)"
+              @pointerleave="releaseMove('right', $event)"
+            >▶</button>
+            <button
+              class="dpad-button down"
+              type="button"
+              aria-label="Andar para baixo"
+              @pointerdown="pressMove('down', $event)"
+              @pointerup="releaseMove('down', $event)"
+              @pointercancel="releaseMove('down', $event)"
+              @pointerleave="releaseMove('down', $event)"
+            >▼</button>
+          </div>
+          <button
+            class="work-action"
+            type="button"
+            @click="requestWorkInteract"
+          >
+            Interagir
+          </button>
+        </div>
+
         <Transition name="toast">
           <div v-if="toast" class="toast" role="status" aria-live="polite">{{ toast }}</div>
         </Transition>
@@ -461,6 +721,65 @@ onBeforeUnmount(() => {
           </div>
         </Transition>
       </div>
+
+      <Transition name="modal">
+        <div v-if="shopMode" class="modal-backdrop" @click.self="closeShop">
+          <section class="modal-card shop-card" role="dialog" aria-modal="true" :aria-label="shopTitle">
+            <header class="modal-head">
+              <div>
+                <span class="modal-kicker">{{ shopKicker }}</span>
+                <h2>{{ shopTitle }}</h2>
+              </div>
+              <button class="modal-close" type="button" aria-label="Fechar" @click="closeShop">×</button>
+            </header>
+            <p class="shop-balance">Saldo disponível: <strong>$ {{ gameState.balance }}</strong><span v-if="shopMode === 'guests'" class="guest-count"> • {{ gameState.guests.length }} no camarote</span></p>
+            <ul class="shop-list">
+              <li v-for="item in shopEntries" :key="item.id" :class="{ unaffordable: gameState.balance < item.price }">
+                <div class="shop-item-copy">
+                  <strong>{{ item.name }}</strong>
+                  <span>{{ item.detail }}</span>
+                </div>
+                <div class="shop-item-action">
+                  <span class="shop-price">$ {{ item.price }}</span>
+                  <button
+                    v-if="shopMode === 'drinks'"
+                    class="modal-action"
+                    type="button"
+                    @click="buySelectedDrink(item)"
+                  >
+                    Comprar
+                  </button>
+                  <button
+                    v-else
+                    class="modal-action"
+                    type="button"
+                    :disabled="isGuestInvited(item.id)"
+                    @click="inviteSelectedGuest(item)"
+                  >
+                    {{ isGuestInvited(item.id) ? 'No camarote' : 'Convidar' }}
+                  </button>
+                </div>
+              </li>
+            </ul>
+            <p class="shop-note">Dinheiro virtual do jogo. Nenhuma cobrança real é feita.</p>
+          </section>
+        </div>
+      </Transition>
+
+      <Transition name="modal">
+        <div v-if="payment" class="modal-backdrop" role="dialog" aria-modal="true" aria-label="Pagamento do expediente">
+          <section class="modal-card payment-card">
+            <span class="modal-kicker">CEASA • PAGAMENTO</span>
+            <h2>Expediente concluído!</h2>
+            <p>Você recebeu <strong class="payment-amount">$ {{ payment.amount }}</strong> pelo turno.</p>
+            <p class="shop-balance">Saldo atual: <strong>$ {{ gameState.balance }}</strong></p>
+            <div class="modal-actions">
+              <button class="modal-action ghost" type="button" @click="leaveWork('bedroom')">Voltar pra casa</button>
+              <button class="modal-action primary" type="button" @click="leaveWork('duck')">Ir pra Duck</button>
+            </div>
+          </section>
+        </div>
+      </Transition>
     </section>
 
     <p class="portrait-tip">{{ hintText }}</p>

@@ -50,3 +50,23 @@ export const ASSETS = [
   { key: 'mb-drink-5', file: 'mb-drink-5.webp' },
   { key: 'mb-drink-6', file: 'mb-drink-6.webp' }
 ]
+
+export const CEASA_ASSETS = [
+  { key: 'ceasa-street', file: 'ceasa-street.webp' },
+  { key: 'ceasa-bus-interior', file: 'ceasa-bus-interior.webp' },
+  { key: 'ceasa-facade', file: 'ceasa-facade.webp' },
+  { key: 'ceasa-warehouse', file: 'ceasa-warehouse.webp' },
+  { key: 'ceasa-breakroom', file: 'ceasa-breakroom.webp' },
+  { key: 'ceasa-clock', file: 'ceasa-clock.webp' },
+  { key: 'ceasa-forklift', file: 'ceasa-forklift.webp' },
+  { key: 'ceasa-pallet', file: 'ceasa-pallet.webp' },
+  { key: 'ceasa-crate-tomato', file: 'ceasa-crate-tomato.webp' },
+  { key: 'ceasa-crate-lettuce', file: 'ceasa-crate-lettuce.webp' },
+  { key: 'ceasa-crate-banana', file: 'ceasa-crate-banana.webp' },
+  { key: 'ceasa-crate-carrot', file: 'ceasa-crate-carrot.webp' },
+  { key: 'ceasa-crate-empty', file: 'ceasa-crate-empty.webp' },
+  { key: 'ceasa-worker-1', file: 'ceasa-worker-1.webp' },
+  { key: 'ceasa-worker-2', file: 'ceasa-worker-2.webp' },
+  { key: 'ceasa-worker-3', file: 'ceasa-worker-3.webp' },
+  { key: 'ceasa-worker-4', file: 'ceasa-worker-4.webp' }
+]

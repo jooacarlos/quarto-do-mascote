@@ -100,3 +100,39 @@ Estes arquivos foram identificados na auditoria, mas não entram no jogo para ev
 - `Chibi_characters_socializing…`
 - cena de pista lotada
 - assets de bar e mobiliário do camarote
+
+
+## 6. CEASA (V3)
+
+### Cenários
+
+| Asset final | Origem | Uso |
+| --- | --- | --- |
+| `ceasa-street.webp` | `Bus_arriving_at_stop_2K_20261019154114.jpg` | Rua e ponto do ônibus 101 |
+| `ceasa-bus-interior.webp` | `City_bus_interior_background_2K_20261019154323.jpg` | Viagem até o CEASA |
+| `ceasa-facade.webp` | `CEASA_wholesale_market_facade_mo._2K_20261019154307.jpg` | Fachada e entrada do galpão |
+| `ceasa-warehouse.webp` | `CEASA_wholesale_warehouse_interior_2K_20261019154227.jpg` | Galpão jogável, caminhão/setores |
+| `ceasa-breakroom.webp` | `Game_break_room_background_2K_20261019154320.jpg` | Reserva para o refeitório; não usada ainda |
+
+### Objetos e personagens
+
+| Asset final | Origem | Uso |
+| --- | --- | --- |
+| `ceasa-clock.webp` | `2D_game_props_for_warehouse_2K_20261019154311.jpg` (relógio) | Relógio de ponto |
+| `ceasa-crate-tomato.webp` | `Market_game_assets_collection_2K_20261019154144.jpg` | Caixa de tomate |
+| `ceasa-crate-lettuce.webp` | mesma folha | Caixa de alface |
+| `ceasa-crate-banana.webp` | mesma folha | Caixa de banana |
+| `ceasa-crate-carrot.webp` | mesma folha | Reserva para cenoura |
+| `ceasa-crate-empty.webp` | mesma folha | Reserva/placeholder |
+| `ceasa-pallet.webp` | mesma folha | Reserva de pallet |
+| `ceasa-worker-1` a `ceasa-worker-4.webp` | `Chibi_characters_as_warehouse_wo._2K_20261019154313.jpg` | Lia, Seu Nilton, Davi e Rita |
+| `ceasa-forklift.webp` | `2D_game_props_for_warehouse_2K_20261019154311.jpg` | Reserva de empilhadeira |
+
+Os recortes de objetos e personagens usam remoção de fundo por flood fill a partir das bordas; os cenários são redimensionados para 1600x900 e convertidos para WebP. O comando `npm run assets` agora também executa `scripts/process-ceasa-assets.mjs`.
+
+### O que falta
+
+- Sprite/frames de Mbranco carregando caixa e pegando/depositando com as mãos.
+- Sprite separado do ônibus e das portas; o cenário tem o veículo integrado.
+- Maçãs, laranjas e cenoura como tipos completos de entrega (os assets de cenoura existem; maçã/laranja não têm caixa isolada).
+- Cenário de refeitório/vestiário jogável (o fundo está preparado em `ceasa-breakroom.webp`).

@@ -1,4 +1,4 @@
-export const EVENTS = {
+﻿export const EVENTS = {
   READY: 'game:ready',
   REQUEST_WAVE: 'ui:request-wave',
   REQUEST_CLUB: 'ui:request-club',
@@ -6,6 +6,10 @@ export const EVENTS = {
   REQUEST_AREA: 'ui:request-area',
   REQUEST_INTERACT: 'ui:request-interact',
   REQUEST_TALK: 'ui:request-talk',
+  REQUEST_WORK: 'ui:request-work',
+  REQUEST_WORK_INTERACT: 'ui:request-work-interact',
+  REQUEST_WORK_RETURN: 'ui:request-work-return',
+  WORK_MOVE: 'ui:work-move',
   TOGGLE_SOUND: 'ui:toggle-sound',
   CHARACTER_STATE: 'game:character-state',
   SOUND_STATE: 'game:sound-state',
@@ -14,5 +18,12 @@ export const EVENTS = {
   DIALOGUE_CLEAR: 'game:dialogue-clear',
   LOCATION: 'game:location',
   TRAVEL_STATE: 'game:travel-state',
-  AREA_STATE: 'game:area-state'
+  AREA_STATE: 'game:area-state',
+  WORK_STATE: 'game:work-state',
+  WORK_PROMPT: 'game:work-prompt',
+  SHIFT_PAID: 'game:shift-paid',
+  OPEN_DRINK_MENU: 'game:open-drink-menu',
+  OPEN_GUEST_MENU: 'game:open-guest-menu',
+  DUCK_DRINK_BOUGHT: 'game:duck-drink-bought',
+  DUCK_GUEST_INVITED: 'game:duck-guest-invited'
 }

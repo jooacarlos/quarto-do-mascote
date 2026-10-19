@@ -9,6 +9,7 @@ import { getSoundManager } from '../systems/SoundManager.js'
 import { createCharacterAnimations } from '../animations.js'
 import { addGlow, addSoftShadow, ensureEffectTextures } from '../effects.js'
 import { isCanvasPointer } from '../input.js'
+import { GUESTS, gameState } from '../state.js'
 
 const BACKGROUNDS = {
   dance: 'duck-dancefloor',
@@ -83,6 +84,7 @@ export default class DuckScene extends Phaser.Scene {
     this.buildDanceArea()
     this.buildBarArea()
     this.buildVipArea()
+    this.refreshGuests()
     this.setArea(this.area, { instant: true })
     this.placeCharacter(this.area, true)
 
@@ -94,6 +96,8 @@ export default class DuckScene extends Phaser.Scene {
     this.handleRequestInteract = (action) => this.interact(action)
     this.handleRequestTalk = () => this.talk()
     this.handleRequestReturn = () => this.returnHome()
+    this.handleDrinkBought = (payload) => this.serveDrink(payload)
+    this.handleGuestInvited = (payload) => this.receiveGuest(payload)
     this.handleToggleSound = () => {
       const enabled = this.soundManager.toggle()
       gameBus.emit(EVENTS.SOUND_STATE, enabled)
@@ -104,6 +108,8 @@ export default class DuckScene extends Phaser.Scene {
     gameBus.on(EVENTS.REQUEST_INTERACT, this.handleRequestInteract)
     gameBus.on(EVENTS.REQUEST_TALK, this.handleRequestTalk)
     gameBus.on(EVENTS.REQUEST_RETURN, this.handleRequestReturn)
+    gameBus.on(EVENTS.DUCK_DRINK_BOUGHT, this.handleDrinkBought)
+    gameBus.on(EVENTS.DUCK_GUEST_INVITED, this.handleGuestInvited)
     gameBus.on(EVENTS.TOGGLE_SOUND, this.handleToggleSound)
     this.events.once('shutdown', this.shutdown, this)
 
@@ -657,6 +663,16 @@ export default class DuckScene extends Phaser.Scene {
       this.danceActive = false
     }
     if (this.characters.state === 'talking') this.characters.idle()
+    this.soundManager.play('ui')
+    this.dialogue.say('bar', { interrupt: true, priority: 14 })
+    gameBus.emit(EVENTS.OPEN_DRINK_MENU)
+  }
+
+  serveDrink(payload) {
+    if (this.area !== 'bar' || this.traveling) return
+    if (this.characters?.state === 'talking') this.characters.idle()
+    if (this.characters?.state === 'dancing') this.characters.stopDance()
+    const drinkName = payload?.drink?.name ?? 'Gin tônica'
     const targetX = 540
     const perform = () => {
       if (this.area !== 'bar' || this.traveling || this.characters.isBusy()) return
@@ -665,9 +681,9 @@ export default class DuckScene extends Phaser.Scene {
       })
       this.soundManager.play('clink')
       this.time.delayedCall(560, () => this.soundManager.play('sip'))
-      this.dialogue.say('gin', { interrupt: true, priority: 20 })
+      this.dialogue.say('gin', { force: true, interrupt: true, priority: 20 })
       this.sparkleBurst(this.characters.sprite.x + 26, this.characters.sprite.y - 270, 5, 0xffb3d9)
-      gameBus.emit(EVENTS.TOAST, 'Gin tônica na mão')
+      gameBus.emit(EVENTS.TOAST, `${drinkName} na mão`)
     }
     if (Math.abs(this.characters.sprite.x - targetX) > 26) {
       this.characters.walkTo(targetX, ANCHORS.bar.y, 1000, { onComplete: perform })
@@ -683,22 +699,55 @@ export default class DuckScene extends Phaser.Scene {
       this.danceActive = false
     }
     if (this.characters.state === 'talking') this.characters.idle()
-    const targetX = 650
-    const perform = () => {
-      if (this.area !== 'vip' || this.traveling || this.characters.isBusy()) return
-      this.characters.happy(2200)
-      this.soundManager.play('cheer')
-      this.dialogue.say('vip', { interrupt: true, priority: 20 })
-      this.sparkleBurst(this.characters.sprite.x, this.characters.sprite.y - 330, 10, 0xffe0a3)
-      gameBus.emit(EVENTS.TOAST, 'Camarote liberado')
-    }
-    if (Math.abs(this.characters.sprite.x - targetX) > 26) {
-      this.characters.walkTo(targetX, ANCHORS.vip.y, 950, { onComplete: perform })
-    } else {
-      perform()
-    }
+    this.soundManager.play('ui')
+    this.dialogue.say('vip', { interrupt: true, priority: 14 })
+    gameBus.emit(EVENTS.OPEN_GUEST_MENU)
   }
 
+  receiveGuest(payload) {
+    this.refreshGuests()
+    if (this.area !== 'vip' || this.traveling) return
+    const guest = payload?.guest
+    if (!guest) return
+    this.soundManager.play('cheer')
+    this.characters.happy(1800)
+    this.dialogue.say('vip', { force: true, interrupt: true, priority: 20 })
+    gameBus.emit(EVENTS.TOAST, `${guest.name} entrou no camarote!`)
+    this.sparkleBurst(680, 500, 12, 0xffe0a3)
+  }
+
+  refreshGuests() {
+    for (const guest of this.invitedGuests ?? []) {
+      guest.destroy()
+    }
+    this.invitedGuests = []
+    if (!this.vipObjects) return
+    const positions = [620, 710, 800]
+    gameState.guests.forEach((id, index) => {
+      const guest = GUESTS.find((item) => item.id === id)
+      if (!guest || index > 2) return
+      const x = positions[index]
+      const y = 686
+      const image = this.add
+        .image(x, y, guest.texture)
+        .setOrigin(0.5, 1)
+        .setDepth(y)
+      const source = this.textures.get(guest.texture).getSourceImage()
+      image.setDisplaySize((320 * source.width) / source.height, 320)
+      image.setVisible(this.area === 'vip')
+      this.tweens.add({
+        targets: image,
+        y: y - 3,
+        angle: index % 2 === 0 ? 1.2 : -1.2,
+        duration: 1600 + index * 180,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut'
+      })
+      this.vipObjects.push(image)
+      this.invitedGuests.push(image)
+    })
+  }
   talk() {
     if (this.busy || this.traveling || this.characters.isBusy()) return
     if (this.characters.state === 'dancing') {
@@ -748,6 +797,8 @@ export default class DuckScene extends Phaser.Scene {
     gameBus.off(EVENTS.REQUEST_INTERACT, this.handleRequestInteract)
     gameBus.off(EVENTS.REQUEST_TALK, this.handleRequestTalk)
     gameBus.off(EVENTS.REQUEST_RETURN, this.handleRequestReturn)
+    gameBus.off(EVENTS.DUCK_DRINK_BOUGHT, this.handleDrinkBought)
+    gameBus.off(EVENTS.DUCK_GUEST_INVITED, this.handleGuestInvited)
     gameBus.off(EVENTS.TOGGLE_SOUND, this.handleToggleSound)
     this.characters?.destroy()
     this.dialogue?.destroy()

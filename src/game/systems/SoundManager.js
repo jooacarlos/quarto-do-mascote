@@ -142,6 +142,22 @@ class SoundManager {
     } else if (name === 'whoosh' || name === 'travel') {
       this.tone(180, now, 0.32, 'sawtooth', 0.06)
       this.tone(90, now + 0.2, 0.36, 'sine', 0.08)
+    } else if (name === 'pickup') {
+      this.tone(220, now, 0.07, 'triangle', 0.18)
+      this.tone(330, now + 0.06, 0.09, 'triangle', 0.14)
+    } else if (name === 'deposit') {
+      this.tone(130, now, 0.12, 'sine', 0.24)
+      this.tone(196, now + 0.08, 0.16, 'triangle', 0.15)
+    } else if (name === 'coin') {
+      this.tone(880, now, 0.07, 'sine', 0.2)
+      this.tone(1318.51, now + 0.06, 0.12, 'sine', 0.18)
+      this.tone(1760, now + 0.14, 0.16, 'sine', 0.12)
+    } else if (name === 'error') {
+      this.tone(196, now, 0.12, 'square', 0.1)
+      this.tone(146.83, now + 0.1, 0.16, 'square', 0.08)
+    } else if (name === 'door') {
+      this.tone(110, now, 0.3, 'sawtooth', 0.05)
+      this.tone(220, now + 0.16, 0.18, 'triangle', 0.08)
     }
   }
 

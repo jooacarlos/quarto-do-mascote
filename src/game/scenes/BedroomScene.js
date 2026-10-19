@@ -11,6 +11,7 @@ import { getSoundManager } from '../systems/SoundManager.js'
 import { createCharacterAnimations } from '../animations.js'
 import { addSoftShadow, ensureEffectTextures } from '../effects.js'
 import { isCanvasPointer } from '../input.js'
+import { beginShift, gameState, hasActiveShift, setShiftStage } from '../state.js'
 
 let introPlayed = false
 
@@ -24,6 +25,7 @@ export default class BedroomScene extends Phaser.Scene {
 
   init(data = {}) {
     this.arrivedFromDuck = data.from === 'duck'
+    this.arrivedFromWork = data.from === 'ceasa'
     this.busy = false
     this.traveling = false
   }
@@ -44,6 +46,7 @@ export default class BedroomScene extends Phaser.Scene {
     this.buildFurniture()
     this.buildLamp()
     this.buildCharacter()
+    this.buildWorkExit()
 
     this.soundManager = getSoundManager()
     this.soundManager.setClubMode(false)
@@ -68,6 +71,8 @@ export default class BedroomScene extends Phaser.Scene {
     this.handleRequestWave = () => this.triggerWave()
     this.handleRequestClub = () => this.travelToDuck()
     this.handleRequestTalk = () => this.triggerTalk()
+    this.handleRequestWork = () => this.startWork()
+    this.traveling = false
     this.handleRequestInteract = (action) => {
       if (action === 'bed') this.triggerBed()
       if (action === 'window') this.triggerWindow()
@@ -81,6 +86,7 @@ export default class BedroomScene extends Phaser.Scene {
     gameBus.on(EVENTS.REQUEST_WAVE, this.handleRequestWave)
     gameBus.on(EVENTS.REQUEST_CLUB, this.handleRequestClub)
     gameBus.on(EVENTS.REQUEST_TALK, this.handleRequestTalk)
+    gameBus.on(EVENTS.REQUEST_WORK, this.handleRequestWork)
     gameBus.on(EVENTS.REQUEST_INTERACT, this.handleRequestInteract)
     gameBus.on(EVENTS.TOGGLE_SOUND, this.handleToggleSound)
     this.events.once('shutdown', this.shutdown, this)
@@ -92,6 +98,9 @@ export default class BedroomScene extends Phaser.Scene {
     this.cameras.main.fadeIn(420, 18, 12, 9)
     this.time.delayedCall(80, () => gameBus.emit(EVENTS.READY))
     this.handleArrival()
+    if (this.arrivedFromWork) {
+      this.time.delayedCall(700, () => gameBus.emit(EVENTS.TOAST, 'De volta do CEASA. Salário no bolso!'))
+    }
 
     if (import.meta.env.DEV) {
       window.__mascot = {
@@ -333,6 +342,85 @@ export default class BedroomScene extends Phaser.Scene {
     })
   }
 
+  buildWorkExit() {
+    const glow = this.add
+      .ellipse(1212, 656, 150, 52, 0xffd38a, 0.1)
+      .setStrokeStyle(2, 0xffd38a, 0.4)
+      .setDepth(640)
+    this.tweens.add({
+      targets: glow,
+      alpha: 0.3,
+      duration: 1500,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    })
+    const label = this.add
+      .text(1212, 622, 'SAÍDA', {
+        fontFamily: 'Segoe UI, sans-serif',
+        fontSize: '12px',
+        fontStyle: 'bold',
+        color: '#ffe6b2',
+        stroke: '#2a1b10',
+        strokeThickness: 3,
+        letterSpacing: 2
+      })
+      .setOrigin(0.5, 1)
+      .setAlpha(0.75)
+      .setDepth(642)
+    const zone = this.add
+      .zone(1212, 656, 170, 170)
+      .setOrigin(0.5)
+      .setDepth(641)
+      .setInteractive({ useHandCursor: true })
+    zone.on('pointerdown', (pointer) => {
+      if (!isCanvasPointer(this, pointer)) return
+      this.startWork()
+    })
+    this.workExit = { glow, label, zone }
+  }
+
+  startWork() {
+    if (this.busy || this.traveling || this.characters?.state === 'walking') return
+    if (!this.sys.isActive()) return
+    const active = hasActiveShift()
+    const resumeInCeasa = active && Boolean(gameState.shift?.clockedIn)
+    if (!active) {
+      beginShift()
+      setShiftStage('commute')
+    }
+    this.busy = true
+    this.traveling = true
+    this.characters?.idle()
+    this.dialogue?.clear()
+    this.soundManager?.play('ui')
+    gameBus.emit(EVENTS.TRAVEL_STATE, { phase: 'leaving', from: 'bedroom', target: 'work' })
+    gameBus.emit(
+      EVENTS.TOAST,
+      resumeInCeasa ? 'Voltando ao expediente no CEASA...' : 'Saindo para o trabalho...'
+    )
+    if (resumeInCeasa) {
+      this.time.delayedCall(420, () => {
+        if (!this.sys.isActive()) return
+        this.cameras.main.fadeOut(380, 12, 8, 7)
+        this.cameras.main.once('camerafadeoutcomplete', () => {
+          this.scene.start(SCENES.CEASA, { from: 'resume' })
+        })
+      })
+      return
+    }
+    this.time.delayedCall(280, () => {
+      if (!this.sys.isActive()) return
+      this.characters?.walkTo(1212, LAYOUT.character.y, 1300, {
+        onComplete: () => {
+          this.cameras.main.fadeOut(380, 12, 8, 7)
+          this.cameras.main.once('camerafadeoutcomplete', () => {
+            this.scene.start(SCENES.STREET, { from: 'bedroom' })
+          })
+        }
+      })
+    })
+  }
   toggleLamp() {
     if (this.traveling) return
     this.lampOn = !this.lampOn
@@ -365,6 +453,7 @@ export default class BedroomScene extends Phaser.Scene {
     gameBus.off(EVENTS.REQUEST_WAVE, this.handleRequestWave)
     gameBus.off(EVENTS.REQUEST_CLUB, this.handleRequestClub)
     gameBus.off(EVENTS.REQUEST_TALK, this.handleRequestTalk)
+    gameBus.off(EVENTS.REQUEST_WORK, this.handleRequestWork)
     gameBus.off(EVENTS.REQUEST_INTERACT, this.handleRequestInteract)
     gameBus.off(EVENTS.TOGGLE_SOUND, this.handleToggleSound)
     this.interactives?.destroy()
