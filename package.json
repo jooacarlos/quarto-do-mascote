@@ -1,0 +1,22 @@
+{
+  "name": "quarto-do-mascote",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "assets": "node scripts/process-assets.mjs && node scripts/process-v2-assets.mjs"
+  },
+  "dependencies": {
+    "phaser": "^3.90.0",
+    "vue": "^3.5.44"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.10",
+    "playwright-core": "^1.64.1",
+    "sharp": "^0.35.5",
+    "vite": "^8.3.4"
+  }
+}
