@@ -410,7 +410,7 @@ onBeforeUnmount(() => {
           <span>{{ statusText }}</span>
         </div>
 
-        <div class="venue-badge" aria-hidden="true">
+        <div v-if="world.area !== 'bus'" class="venue-badge" aria-hidden="true">
           <span class="venue-kicker">{{ isDuck ? 'Duck Nightclub' : isWork ? 'CEASA' : 'mascote virtual' }}</span>
           <span class="venue-name">{{ isDuck || isWork ? areaLabel : 'Quarto do Mascote' }}</span>
         </div>
