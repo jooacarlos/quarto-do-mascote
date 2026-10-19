@@ -73,3 +73,23 @@ scripts/
   process-v2-assets.mjs  pipeline da Duck e animações
 docs/ASSETS.md           catálogo de assets
 ```
+
+## Repositório e site
+
+- GitHub: https://github.com/jooacarlos/quarto-do-mascote
+- Site ao vivo: https://quarto-do-mascote.netlify.app
+
+Clonar e rodar em outro PC:
+
+```bash
+git clone https://github.com/jooacarlos/quarto-do-mascote.git
+cd quarto-do-mascote
+npm install
+npm run dev
+```
+
+O deploy de produção usa o `netlify.toml`; depois de instalar o Netlify CLI, rode:
+
+```bash
+npm run deploy
+```
