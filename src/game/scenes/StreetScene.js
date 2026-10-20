@@ -228,12 +228,6 @@ export default class StreetScene extends Phaser.Scene {
 
   update(time, delta) {
     this.player?.update(delta)
-    if (!this.busy && !this.waiting && !this.boardEnabled && this.isNear(BUS_STOP, 110)) {
-      this.reachBusStop()
-    }
-    if (!this.busy && this.boardEnabled && this.isNear(BUS_DOOR, 105)) {
-      this.boardBus()
-    }
     const next = this.boardEnabled
       ? this.isNear(BUS_DOOR)
         ? 'E — Embarcar no ônibus'

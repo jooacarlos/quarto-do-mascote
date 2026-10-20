@@ -42,7 +42,7 @@ export default class CeasaFacadeScene extends Phaser.Scene {
     this.soundManager.setClubMode(false)
 
     this.player = new WorkPlayer(this, {
-      x: 1120,
+      x: 940,
       y: 672,
       height: 360,
       bounds: { left: 150, right: 1160, top: 565, bottom: 688 },

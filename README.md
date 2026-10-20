@@ -108,8 +108,8 @@ O ciclo completo agora inclui **Quarto -> ponto de ônibus -> CEASA -> Duck**. O
 
 ### Fluxo do expediente
 
-1. Sair do quarto e esperar o ônibus 101 no ponto (a parada é automática ao chegar perto).
-2. Embarcar pela porta dianteira (a porta também aciona o embarque ao se aproximar).
+1. Sair do quarto e ir até o ponto do ônibus 101; quando o aviso aparecer, pressione **E** (ou **Interagir**) para esperar o ônibus.
+2. Quando as portas abrirem, aproxime-se da porta dianteira e pressione **E** para embarcar.
 3. Desembarcar, entrar no galpão e bater o ponto.
 4. Falar com Seu Nilton para receber a tarefa de **8 caixas**.
 5. Pegar uma caixa no caminhão e levá-la ao setor correto: **Tomate**, **Folhas** ou **Frutas**.

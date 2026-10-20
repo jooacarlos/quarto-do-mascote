@@ -571,6 +571,7 @@ export default class DuckScene extends Phaser.Scene {
     this.setObjectsVisible(this.danceObjects, area === 'dance')
     this.setObjectsVisible(this.barObjects, area === 'bar')
     this.setObjectsVisible(this.vipObjects, area === 'vip')
+    this.setObjectsVisible(this.invitedGuests, area === 'vip')
     if (this.floorZone?.input) this.floorZone.input.enabled = area === 'dance'
     if (this.djZone?.input) this.djZone.input.enabled = area === 'dance'
     if (this.barZone?.input) this.barZone.input.enabled = area === 'bar'
@@ -721,7 +722,6 @@ export default class DuckScene extends Phaser.Scene {
       guest.destroy()
     }
     this.invitedGuests = []
-    if (!this.vipObjects) return
     const positions = [620, 710, 800]
     gameState.guests.forEach((id, index) => {
       const guest = GUESTS.find((item) => item.id === id)
@@ -744,7 +744,6 @@ export default class DuckScene extends Phaser.Scene {
         repeat: -1,
         ease: 'Sine.easeInOut'
       })
-      this.vipObjects.push(image)
       this.invitedGuests.push(image)
     })
   }
