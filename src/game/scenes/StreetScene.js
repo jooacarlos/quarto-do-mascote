@@ -12,6 +12,7 @@ import {
   preloadWorkAssets,
   prepareWorkScene
 } from '../work/workUtils.js'
+import { registerInteractionPress } from '../voice.js'
 
 const BUS_STOP = { x: 1045, y: 646 }
 const BUS_DOOR = { x: 650, y: 652 }
@@ -220,6 +221,7 @@ export default class StreetScene extends Phaser.Scene {
 
   interactNearest() {
     if (this.busy) return
+    registerInteractionPress()
     if (this.boardEnabled && this.isNear(BUS_DOOR)) return this.boardBus()
     if (!this.waiting && this.isNear(BUS_STOP)) return this.reachBusStop()
     if (this.boardEnabled) return this.tooFar()

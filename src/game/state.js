@@ -45,7 +45,6 @@ function freshState() {
     paidShiftIds: [],
     purchases: [],
     guests: [],
-    fired: false,
     shift: null
   }
 }
@@ -63,7 +62,7 @@ function normalizeShift(shift) {
     taskAccepted: Boolean(shift.taskAccepted),
     completed: Boolean(shift.completed),
     paid: Boolean(shift.paid),
-    fired: Boolean(shift.fired),
+    kicked: Boolean(shift.kicked),
     tomatoesStolen: Math.max(0, Number(shift.tomatoesStolen) || 0),
     stage: typeof shift.stage === 'string' ? shift.stage : 'commute',
     startedAt: Number(shift.startedAt) || Date.now(),
@@ -86,7 +85,6 @@ function loadState() {
       paidShiftIds: Array.isArray(parsed.paidShiftIds) ? parsed.paidShiftIds.map(String) : [],
       purchases: Array.isArray(parsed.purchases) ? parsed.purchases.slice(-40) : [],
       guests: Array.isArray(parsed.guests) ? [...new Set(parsed.guests.map(String))] : [],
-      fired: Boolean(parsed.fired),
       shift
     }
   } catch {
@@ -105,13 +103,10 @@ export function saveState() {
 }
 
 export function hasActiveShift() {
-  return Boolean(
-    gameState.shift && !gameState.shift.paid && !gameState.shift.fired && !gameState.fired
-  )
+  return Boolean(gameState.shift && !gameState.shift.paid && !gameState.shift.kicked)
 }
 
 export function beginShift() {
-  if (gameState.fired) return null
   if (hasActiveShift()) return gameState.shift
   const id = `shift-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
   gameState.shift = {
@@ -124,7 +119,7 @@ export function beginShift() {
     taskAccepted: false,
     completed: false,
     paid: false,
-    fired: false,
+    kicked: false,
     tomatoesStolen: 0,
     stage: 'commute',
     startedAt: Date.now(),
@@ -178,7 +173,7 @@ export function deliverBox(type) {
 
 export function clockOut() {
   const shift = gameState.shift
-  if (!shift || shift.fired || !shift.completed || shift.paid) return false
+  if (!shift || shift.kicked || !shift.completed || shift.paid) return false
   if (!shift.clockedIn || !shift.taskAccepted) return false
   shift.clockedOut = true
   shift.paid = true
@@ -205,24 +200,20 @@ export function canBuy(price) {
 
 export function stealTomato() {
   const shift = gameState.shift
-  if (gameState.fired) {
-    return { ok: false, fired: true, reason: 'Voltar para o Taco Bell! Você foi demitido.' }
-  }
-  if (!shift || !shift.clockedIn || shift.paid || shift.fired) {
+  if (!shift || !shift.clockedIn || shift.paid || shift.kicked) {
     return { ok: false, reason: 'Só dá pra roubar tomate durante o expediente.' }
   }
 
   const stolen = Math.max(0, Number(shift.tomatoesStolen) || 0)
   if (stolen >= MAX_TOMATO_STEALS) {
     shift.tomatoesStolen = stolen + 1
-    shift.fired = true
-    shift.stage = 'fired'
-    gameState.fired = true
+    shift.kicked = true
+    shift.stage = 'kicked'
     saveState()
     return {
       ok: false,
-      fired: true,
-      reason: 'Voltar para o Taco Bell! Você foi demitido.'
+      kicked: true,
+      reason: 'Voltar para o Taco Bell! Você foi mandado embora do CEASA.'
     }
   }
 
@@ -236,10 +227,6 @@ export function stealTomato() {
     stolen: shift.tomatoesStolen,
     max: MAX_TOMATO_STEALS
   }
-}
-
-export function isFired() {
-  return Boolean(gameState.fired)
 }
 
 export function buyDrink(drinkId) {

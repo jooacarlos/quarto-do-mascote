@@ -10,6 +10,7 @@ import { createCharacterAnimations } from '../animations.js'
 import { addGlow, addSoftShadow, ensureEffectTextures } from '../effects.js'
 import { isCanvasPointer } from '../input.js'
 import { GUESTS, gameState } from '../state.js'
+import { maybeSpeak, registerInteractionPress, speak } from '../voice.js'
 
 const BACKGROUNDS = {
   dance: 'duck-dancefloor',
@@ -125,6 +126,9 @@ export default class DuckScene extends Phaser.Scene {
       } else {
         this.dialogue.say(AREA_LINES[this.area])
       }
+    })
+    this.time.delayedCall(900, () => {
+      if (this.sys.isActive()) speak('duckArrive', { volume: 0.9 })
     })
 
     if (import.meta.env.DEV) {
@@ -506,8 +510,15 @@ export default class DuckScene extends Phaser.Scene {
       !dialogueId
     )
       return
+    registerInteractionPress()
     this.soundManager.play('ui')
     this.dialogue.say(dialogueId, { force: true, interrupt: true, priority: 20 })
+    maybeSpeak(['duckFiot', 'duckBoi'], {
+      chance: 0.5,
+      cooldown: 9000,
+      groupCooldown: 7000,
+      volume: 0.85
+    })
     const baseX = image.scaleX
     const baseY = image.scaleY
     this.tweens.add({
@@ -533,6 +544,12 @@ export default class DuckScene extends Phaser.Scene {
     this.soundManager.play('dance')
     this.soundManager.setClubMode(true)
     this.dialogue.say('dj', { force: true, interrupt: true, priority: 20 })
+    maybeSpeak(['duckBoi', 'duckFiot'], {
+      chance: 0.45,
+      cooldown: 9000,
+      groupCooldown: 7000,
+      volume: 0.8
+    })
     this.sparkleBurst(640, 440, 12, 0xb8a0ff)
     gameBus.emit(EVENTS.TOAST, 'Solta o som, DJ!')
   }
@@ -610,6 +627,12 @@ export default class DuckScene extends Phaser.Scene {
       gameBus.emit(EVENTS.LOCATION, { scene: 'duck', area, traveling: false })
       gameBus.emit(EVENTS.AREA_STATE, { scene: 'duck', area, transitioning: false })
       this.dialogue.say(AREA_LINES[area], { interrupt: true, priority: 16 })
+      maybeSpeak(['duckBoi'], {
+        chance: 0.5,
+        cooldown: 9000,
+        groupCooldown: 7000,
+        volume: 0.85
+      })
       this.time.delayedCall(260, () => {
         this.busy = false
       })
@@ -633,6 +656,7 @@ export default class DuckScene extends Phaser.Scene {
 
   interact(action) {
     if (this.busy || this.traveling) return
+    registerInteractionPress()
     if (action === 'dance') this.toggleDance()
     else if (action === 'bar') this.orderDrink()
     else if (action === 'vip') this.enjoyVip()
@@ -655,6 +679,12 @@ export default class DuckScene extends Phaser.Scene {
     this.dialogue.say('dance', { interrupt: true, priority: 16 })
     this.sparkleBurst(640, 430, 10, 0xff8ce6)
     gameBus.emit(EVENTS.TOAST, 'Dançando na Duck')
+    maybeSpeak(['duckBoi', 'duckFiot'], {
+      chance: 0.45,
+      cooldown: 9000,
+      groupCooldown: 7000,
+      volume: 0.8
+    })
   }
 
   orderDrink() {
@@ -683,6 +713,12 @@ export default class DuckScene extends Phaser.Scene {
       this.soundManager.play('clink')
       this.time.delayedCall(560, () => this.soundManager.play('sip'))
       this.dialogue.say('drinkCrazy', { force: true, interrupt: true, priority: 22 })
+      maybeSpeak(['duckFiot', 'duckBoi'], {
+        chance: 0.7,
+        cooldown: 8000,
+        groupCooldown: 6000,
+        volume: 0.85
+      })
       this.sparkleBurst(this.characters.sprite.x + 26, this.characters.sprite.y - 270, 5, 0xffb3d9)
       gameBus.emit(EVENTS.TOAST, `${drinkName} na mão`)
     }
@@ -749,6 +785,7 @@ export default class DuckScene extends Phaser.Scene {
   }
   talk() {
     if (this.busy || this.traveling || this.characters.isBusy()) return
+    registerInteractionPress()
     if (this.characters.state === 'dancing') {
       this.characters.stopDance()
       this.danceActive = false
@@ -760,6 +797,12 @@ export default class DuckScene extends Phaser.Scene {
       priority: 8
     })
     if (shown) this.characters.talk(4200)
+    maybeSpeak(['duckFiot', 'duckBoi'], {
+      chance: 0.6,
+      cooldown: 9000,
+      groupCooldown: 7000,
+      volume: 0.85
+    })
   }
 
   returnHome() {

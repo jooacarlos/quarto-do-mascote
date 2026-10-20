@@ -25,6 +25,7 @@ import {
   preloadWorkAssets,
   prepareWorkScene
 } from '../work/workUtils.js'
+import { maybeSpeak, registerInteractionPress, speak } from '../voice.js'
 
 const CLOCK = { x: 1130, y: 640, radius: 90 }
 const TRUCK = { x: 995, y: 622, radius: 180 }
@@ -107,6 +108,7 @@ export default class CeasaScene extends Phaser.Scene {
     gameBus.emit(EVENTS.SOUND_STATE, !this.soundManager.muted)
     gameBus.emit(EVENTS.LOCATION, { scene: 'work', area: 'ceasa', traveling: false })
     this.emitMission()
+    this.startWorkVoiceLoop()
     this.cameras.main.fadeIn(420, 12, 11, 12)
     gameBus.emit(EVENTS.READY)
 
@@ -161,6 +163,27 @@ export default class CeasaScene extends Phaser.Scene {
     gameBus.on(EVENTS.TOGGLE_SOUND, this.handleToggleSound)
     gameBus.on(EVENTS.REQUEST_WORK_RETURN, this.handleWorkReturn)
     this.events.once('shutdown', this.shutdown, this)
+  }
+
+  startWorkVoiceLoop() {
+    if (this.workVoiceTimer) return
+    const shift = gameState.shift
+    if (!shift?.clockedIn || shift.paid || shift.kicked) return
+
+    const trigger = () => {
+      if (!this.sys.isActive()) return
+      const current = gameState.shift
+      if (!current || current.paid || current.kicked) return
+      maybeSpeak(['workLula', 'workSuave', 'workCarta'], {
+        chance: 0.6,
+        cooldown: 12000,
+        groupCooldown: 14000,
+        volume: 0.85
+      })
+    }
+
+    this.time.delayedCall(6000, trigger)
+    this.workVoiceTimer = this.time.addEvent({ delay: 16000, loop: true, callback: trigger })
   }
 
   buildClock() {
@@ -383,21 +406,21 @@ export default class CeasaScene extends Phaser.Scene {
   emitMission() {
     const shift = gameState.shift
     if (!shift) return
-    if (gameState.fired || shift.fired) {
+    if (shift.kicked) {
       gameBus.emit(EVENTS.WORK_STATE, {
         active: true,
         scene: 'ceasa',
-        phase: 'fired',
-        title: 'Demitido',
-        objective: 'Voltar para o Taco Bell.',
+        phase: 'kicked',
+        title: 'Mandado embora',
+        objective: 'Voltar para o Taco Bell... mas você pode voltar depois.',
         progress: null,
-        detail: 'Você roubou tomate demais e foi demitido do CEASA.',
+        detail: 'Você roubou tomate demais e foi mandado embora do CEASA.',
         clockedIn: shift.clockedIn,
         completed: false,
         paid: false,
         carrying: null,
         controls: false,
-        stage: 'fired',
+        stage: 'kicked',
         balance: gameState.balance
       })
       return
@@ -588,8 +611,8 @@ export default class CeasaScene extends Phaser.Scene {
     }
     if (this.time.now < this.stealCooldownUntil) return
     const result = stealTomato()
-    if (result.fired) {
-      this.getFired()
+    if (result.kicked) {
+      this.getKickedOut()
       return
     }
     if (!result.ok) {
@@ -599,9 +622,15 @@ export default class CeasaScene extends Phaser.Scene {
     this.stealCooldownUntil = this.time.now + 450
     this.soundManager.play('coin')
     this.sparkle(TOMATO_STASH.x, TOMATO_STASH.y - 40, 0xff8b83, 7)
+    maybeSpeak(['workSuave', 'workCarta'], {
+      chance: 0.5,
+      cooldown: 10000,
+      groupCooldown: 9000,
+      volume: 0.8
+    })
     const warning =
       result.stolen >= result.max
-        ? ` (${result.stolen}/${result.max}) Cuidado: mais um roubo e você é demitido!`
+        ? ` (${result.stolen}/${result.max}) Cuidado: mais um roubo e você é mandado embora!`
         : ` (${result.stolen}/${result.max} no total)`
     gameBus.emit(EVENTS.TOAST, `Tomate roubado! +$${result.amount} no bolso.${warning}`)
     this.dialogue.say('stealTomato', { force: true, interrupt: true, priority: 13 })
@@ -609,16 +638,19 @@ export default class CeasaScene extends Phaser.Scene {
     this.refreshPrompt()
   }
 
-  getFired() {
+  getKickedOut() {
     if (this.busy) return
     this.busy = true
     this.player.setLocked(true)
     this.soundManager.play('error')
     this.dialogue.clear()
-    this.dialogue.say('firedFromCeasa', { force: true, interrupt: true, priority: 60 })
-    gameBus.emit(EVENTS.TOAST, 'Você foi pego roubando tomate! Voltar para o Taco Bell!')
+    this.dialogue.say('kickedFromCeasa', { force: true, interrupt: true, priority: 60 })
+    gameBus.emit(
+      EVENTS.TOAST,
+      'Você foi pego roubando tomate! Mandado embora... mas pode voltar depois.'
+    )
     this.emitMission()
-    this.time.delayedCall(2800, () => {
+    this.time.delayedCall(3000, () => {
       if (!this.sys.isActive()) return
       this.cameras.main.fadeOut(420, 10, 7, 7)
       this.cameras.main.once('camerafadeoutcomplete', () => {
@@ -652,6 +684,7 @@ export default class CeasaScene extends Phaser.Scene {
     if (!shift.taskAccepted) {
       acceptTask()
       setShiftStage('working')
+      this.startWorkVoiceLoop()
       this.soundManager.play('ui')
       this.dialogue.say('managerTask', { force: true, interrupt: true, priority: 25 })
       this.sayManagerRant()
@@ -667,21 +700,33 @@ export default class CeasaScene extends Phaser.Scene {
 
   sayManagerRant() {
     this.dialogue.say('managerWorking', { priority: 5 })
+    maybeSpeak(['workLula', 'workSuave', 'workCarta'], {
+      chance: 0.7,
+      cooldown: 9000,
+      groupCooldown: 8000,
+      volume: 0.85
+    })
   }
 
   talkToCoworker(coworker) {
     this.soundManager.play('ui')
     this.dialogue.say(coworker.dialogue, { force: true, interrupt: true, priority: 11 })
     this.sparkle(coworker.x, coworker.y - 130, 0xffe6a8, 5)
+    maybeSpeak(['workLula', 'workSuave', 'workCarta'], {
+      chance: 0.7,
+      cooldown: 9000,
+      groupCooldown: 8000,
+      volume: 0.85
+    })
   }
 
   interactNearest() {
     if (this.busy) return
     if (!gameState.shift) return
+    registerInteractionPress()
     if (
       gameState.shift?.clockedIn &&
-      !gameState.shift.fired &&
-      !gameState.fired &&
+      !gameState.shift.kicked &&
       !this.player.isCarrying &&
       this.isNear(TOMATO_STASH, TOMATO_STASH.radius)
     ) {
@@ -729,7 +774,7 @@ export default class CeasaScene extends Phaser.Scene {
 
   refreshPrompt() {
     let next = ''
-    if (gameState.shift && !gameState.shift.paid) {
+    if (gameState.shift && !gameState.shift.paid && !gameState.shift.kicked) {
       const zone = this.nearestZone()
       if (
         gameState.shift?.clockedIn &&
@@ -739,7 +784,7 @@ export default class CeasaScene extends Phaser.Scene {
         const stolen = Number(gameState.shift.tomatoesStolen) || 0
         next =
           stolen >= MAX_TOMATO_STEALS
-            ? 'E — Roubar tomate (mais um e você é demitido!)'
+            ? 'E — Roubar tomate (mais um e você é mandado embora!)'
             : `E — Roubar tomate (+$${TOMATO_STEAL_REWARD}) [${stolen}/${MAX_TOMATO_STEALS}]`
       } else if (this.player.isCarrying && zone) {
         next = `E — Entregar em ${zone.label}`
@@ -808,6 +853,7 @@ export default class CeasaScene extends Phaser.Scene {
     this.busy = true
     this.player?.setLocked(true)
     if (target === 'duck') {
+      speak('duckTrip', { volume: 0.9 })
       this.soundManager.play('travel')
       gameBus.emit(EVENTS.TRAVEL_STATE, { phase: 'traveling', from: 'ceasa', target: 'duck' })
       this.cameras.main.fadeOut(420, 10, 7, 12)

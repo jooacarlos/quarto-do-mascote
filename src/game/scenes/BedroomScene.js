@@ -12,6 +12,7 @@ import { createCharacterAnimations } from '../animations.js'
 import { addSoftShadow, ensureEffectTextures } from '../effects.js'
 import { isCanvasPointer } from '../input.js'
 import { beginShift, gameState, hasActiveShift, setShiftStage } from '../state.js'
+import { registerInteractionPress, speak } from '../voice.js'
 
 let introPlayed = false
 
@@ -102,8 +103,8 @@ export default class BedroomScene extends Phaser.Scene {
       this.time.delayedCall(700, () =>
         gameBus.emit(
           EVENTS.TOAST,
-          gameState.fired
-            ? 'Voltar para o Taco Bell! Você foi demitido do CEASA.'
+          gameState.shift?.kicked
+            ? 'Mandado embora do CEASA. Volte quando quiser!'
             : 'De volta do CEASA. Salário no bolso!'
         )
       )
@@ -282,6 +283,7 @@ export default class BedroomScene extends Phaser.Scene {
 
   triggerWave() {
     if (!this.characters || this.busy || this.traveling) return
+    registerInteractionPress()
     const started = this.characters.wave()
     if (!started) return
     this.soundManager?.play('wave')
@@ -298,6 +300,7 @@ export default class BedroomScene extends Phaser.Scene {
 
   triggerBed() {
     if (this.busy || this.traveling || this.characters?.isBusy()) return
+    registerInteractionPress()
     this.soundManager?.play('ui')
     this.characters?.talk(3800)
     this.dialogue?.say('bed', { interrupt: true })
@@ -305,6 +308,7 @@ export default class BedroomScene extends Phaser.Scene {
 
   triggerWindow() {
     if (this.busy || this.traveling || this.characters?.isBusy()) return
+    registerInteractionPress()
     this.soundManager?.play('ui')
     this.dialogue?.say('window', { force: true, interrupt: true })
   }
@@ -329,6 +333,7 @@ export default class BedroomScene extends Phaser.Scene {
     gameBus.emit(EVENTS.TRAVEL_STATE, { phase: 'leaving', from: 'bedroom', target: 'duck' })
     gameBus.emit(EVENTS.TOAST, 'Indo para a Duck...')
     this.dialogue?.say('club', { force: true, interrupt: true, priority: 50 })
+    speak('duckTrip', { volume: 0.9 })
     this.soundManager?.play('happy')
     this.characters?.happy(1800)
 
@@ -390,12 +395,6 @@ export default class BedroomScene extends Phaser.Scene {
   startWork() {
     if (this.busy || this.traveling || this.characters?.state === 'walking') return
     if (!this.sys.isActive()) return
-    if (gameState.fired) {
-      this.soundManager?.play('error')
-      gameBus.emit(EVENTS.TOAST, 'Você foi demitido do CEASA. Voltar para o Taco Bell!')
-      this.dialogue?.say('firedReminder', { force: true, interrupt: true, priority: 30 })
-      return
-    }
     const active = hasActiveShift()
     const resumeInCeasa = active && Boolean(gameState.shift?.clockedIn)
     if (!active) {

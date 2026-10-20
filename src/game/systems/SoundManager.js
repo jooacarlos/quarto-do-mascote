@@ -1,3 +1,5 @@
+import { AUDIO_BASE, VOICE_LINES } from '../constants.js'
+
 class SoundManager {
   constructor() {
     this.context = null
@@ -7,6 +9,8 @@ class SoundManager {
     this.beatTimer = null
     this.beatStep = 0
     this.destroyed = false
+    this.voiceAudio = null
+    this.voiceKey = null
     this.handleVisibility = this.handleVisibility.bind(this)
     document.addEventListener('visibilitychange', this.handleVisibility)
   }
@@ -37,6 +41,7 @@ class SoundManager {
     }
     if (muted) {
       this.stopBeat()
+      this.stopVoice()
     } else if (this.clubMode) {
       this.startBeat()
     }
@@ -161,6 +166,46 @@ class SoundManager {
     }
   }
 
+  playVoice(key, options = {}) {
+    if (this.destroyed || this.muted) return false
+    const file = VOICE_LINES[key]
+    if (!file) return false
+    if (options.restart !== false) this.stopVoice()
+    const audio = new Audio(`${AUDIO_BASE}${file}`)
+    audio.volume = Math.max(0, Math.min(1, Number(options.volume ?? 0.9) || 0.9))
+    this.voiceAudio = audio
+    this.voiceKey = key
+    audio.addEventListener(
+      'ended',
+      () => {
+        if (this.voiceAudio === audio) {
+          this.voiceAudio = null
+          this.voiceKey = null
+        }
+      },
+      { once: true }
+    )
+    const promise = audio.play()
+    if (promise?.catch) promise.catch(() => {})
+    return true
+  }
+
+  stopVoice() {
+    if (!this.voiceAudio) return
+    try {
+      this.voiceAudio.pause()
+      this.voiceAudio.currentTime = 0
+    } catch {
+      // áudio indisponível
+    }
+    this.voiceAudio = null
+    this.voiceKey = null
+  }
+
+  isVoicePlaying() {
+    return Boolean(this.voiceAudio && !this.voiceAudio.paused)
+  }
+
   tone(frequency, startTime, duration, type, volume) {
     if (!this.context || !this.master) return
     const oscillator = this.context.createOscillator()
@@ -177,11 +222,13 @@ class SoundManager {
   }
 
   handleVisibility() {
-    if (!this.context) return
     if (document.visibilityState === 'hidden') {
-      this.context.suspend()
       this.stopBeat()
-    } else if (!this.muted) {
+      this.stopVoice()
+      if (this.context) this.context.suspend()
+      return
+    }
+    if (this.context && !this.muted) {
       this.context.resume()
       if (this.clubMode) this.startBeat()
     }
@@ -190,6 +237,7 @@ class SoundManager {
   destroy() {
     this.destroyed = true
     this.stopBeat()
+    this.stopVoice()
     document.removeEventListener('visibilitychange', this.handleVisibility)
     if (this.context) {
       this.context.close()

@@ -12,6 +12,7 @@ import {
   preloadWorkAssets,
   prepareWorkScene
 } from '../work/workUtils.js'
+import { registerInteractionPress } from '../voice.js'
 
 const ENTRANCE = { x: 700, y: 638 }
 
@@ -122,6 +123,7 @@ export default class CeasaFacadeScene extends Phaser.Scene {
 
   interactNearest() {
     if (this.busy) return
+    registerInteractionPress()
     if (this.isNearEntrance()) return this.enterCeasa()
     this.tooFar()
   }

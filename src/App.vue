@@ -183,7 +183,6 @@ const hintText = computed(() => {
     }
     return 'Toque na pista, no DJ, no globo ou nos NPCs'
   }
-  if (gameState.fired) return 'Você foi demitido do CEASA. Voltar para o Taco Bell.'
   return 'Toque no personagem, no abajur, na cama ou na janela'
 })
 
@@ -231,13 +230,7 @@ const clubDisabled = computed(
 )
 
 const workDisabled = computed(
-  () =>
-    !ready.value ||
-    isWork.value ||
-    isDuck.value ||
-    world.value.traveling ||
-    areaTransition.value ||
-    gameState.fired
+  () => !ready.value || isWork.value || isDuck.value || world.value.traveling || areaTransition.value
 )
 
 const contextDisabled = computed(() => {
@@ -495,7 +488,6 @@ onBeforeUnmount(() => {
               class="action-button work-button"
               type="button"
               :disabled="workDisabled"
-              :title="gameState.fired ? 'Você foi demitido do CEASA' : undefined"
               @click="requestWork"
             >
               <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -508,7 +500,7 @@ onBeforeUnmount(() => {
                   stroke-linejoin="round"
                 />
               </svg>
-              <span>{{ gameState.fired ? 'Demitido' : 'Ir Trabalhar' }}</span>
+              <span>Ir Trabalhar</span>
             </button>
 
             <button
