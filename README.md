@@ -120,7 +120,8 @@ O saldo, o progresso do turno, as compras e os convidados ficam em `localStorage
 
 ### Roubo de tomates e conversas
 
-- Durante o expediente (após bater o ponto), aproxime-se do monte **ROUBAR TOMATE** ao lado do setor Tomate e pressione **E** sem estar carregando: cada tomate rende **$ 6** e o total roubado aparece no aviso.
+- Durante o expediente (após bater o ponto), aproxime-se do monte **ROUBAR TOMATE** no corredor do galpão e pressione **E** sem estar carregando: cada tomate rende **$ 6** e o total roubado aparece no aviso.
+- O limite é de **3 tomates**. Se roubar mais uma vez, o Mbranco é pego, Seu Nilton manda **"Voltar para o Taco Bell"** e o CEASA fica bloqueado permanentemente (o botão **Ir Trabalhar** vira **Demitido**).
 - Cada personagem tem uma conversa própria. No CEASA, Seu Nilton, Lia, Davi e Rita ouvem sempre que o Mbranco odeia trabalhar, adora o Miguel bigode e que, se o Lula ganhar, é bye bye Brasil.
 - Na Duck, Bia, João caga grosso, Miguel bigode, o bartender e o DJ ouvem que a casa está cheia de bbs e que o Mbranco quer gin. Com o João, ele afirma que ele mesmo é bigode; com o Miguel, ele exalta o bigode dele.
 - Ao tomar qualquer bebida no bar da Duck, o Mbranco fala que está ficando louco, que vai chegar nas bbs e que hoje nem o Brunão escapa.

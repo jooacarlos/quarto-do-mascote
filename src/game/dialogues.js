@@ -287,6 +287,18 @@ export const DIALOGUES = {
     duration: 3600,
     priority: 12
   },
+  firedFromCeasa: {
+    speaker: 'Seu Nilton',
+    text: 'Chega de roubo! Voltar para o Taco Bell, você está demitido!',
+    duration: 4400,
+    priority: 60
+  },
+  firedReminder: {
+    speaker: 'Mbranco',
+    text: 'Fui demitido do CEASA... Voltar para o Taco Bell, boi.',
+    duration: 3800,
+    priority: 20
+  },
   ceasaDone: {
     speaker: 'Mbranco',
     text: 'Expediente concluído! Salário na conta e a Duck tá me esperando.',

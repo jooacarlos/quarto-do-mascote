@@ -99,7 +99,14 @@ export default class BedroomScene extends Phaser.Scene {
     this.time.delayedCall(80, () => gameBus.emit(EVENTS.READY))
     this.handleArrival()
     if (this.arrivedFromWork) {
-      this.time.delayedCall(700, () => gameBus.emit(EVENTS.TOAST, 'De volta do CEASA. Salário no bolso!'))
+      this.time.delayedCall(700, () =>
+        gameBus.emit(
+          EVENTS.TOAST,
+          gameState.fired
+            ? 'Voltar para o Taco Bell! Você foi demitido do CEASA.'
+            : 'De volta do CEASA. Salário no bolso!'
+        )
+      )
     }
 
     if (import.meta.env.DEV) {
@@ -383,6 +390,12 @@ export default class BedroomScene extends Phaser.Scene {
   startWork() {
     if (this.busy || this.traveling || this.characters?.state === 'walking') return
     if (!this.sys.isActive()) return
+    if (gameState.fired) {
+      this.soundManager?.play('error')
+      gameBus.emit(EVENTS.TOAST, 'Você foi demitido do CEASA. Voltar para o Taco Bell!')
+      this.dialogue?.say('firedReminder', { force: true, interrupt: true, priority: 30 })
+      return
+    }
     const active = hasActiveShift()
     const resumeInCeasa = active && Boolean(gameState.shift?.clockedIn)
     if (!active) {

@@ -5,6 +5,7 @@ export const SALARY = 150
 export const BOXES_REQUIRED = 8
 export const BOX_REWARD_HINT = 'Descarregue 8 caixas do caminhão e leve cada uma ao setor indicado.'
 export const TOMATO_STEAL_REWARD = 6
+export const MAX_TOMATO_STEALS = 3
 
 export const BOX_TYPES = {
   tomato: { label: 'Tomates', zone: 'tomatoes', texture: 'ceasa-crate-tomato' },
@@ -44,6 +45,7 @@ function freshState() {
     paidShiftIds: [],
     purchases: [],
     guests: [],
+    fired: false,
     shift: null
   }
 }
@@ -61,6 +63,7 @@ function normalizeShift(shift) {
     taskAccepted: Boolean(shift.taskAccepted),
     completed: Boolean(shift.completed),
     paid: Boolean(shift.paid),
+    fired: Boolean(shift.fired),
     tomatoesStolen: Math.max(0, Number(shift.tomatoesStolen) || 0),
     stage: typeof shift.stage === 'string' ? shift.stage : 'commute',
     startedAt: Number(shift.startedAt) || Date.now(),
@@ -83,6 +86,7 @@ function loadState() {
       paidShiftIds: Array.isArray(parsed.paidShiftIds) ? parsed.paidShiftIds.map(String) : [],
       purchases: Array.isArray(parsed.purchases) ? parsed.purchases.slice(-40) : [],
       guests: Array.isArray(parsed.guests) ? [...new Set(parsed.guests.map(String))] : [],
+      fired: Boolean(parsed.fired),
       shift
     }
   } catch {
@@ -101,10 +105,13 @@ export function saveState() {
 }
 
 export function hasActiveShift() {
-  return Boolean(gameState.shift && !gameState.shift.paid)
+  return Boolean(
+    gameState.shift && !gameState.shift.paid && !gameState.shift.fired && !gameState.fired
+  )
 }
 
 export function beginShift() {
+  if (gameState.fired) return null
   if (hasActiveShift()) return gameState.shift
   const id = `shift-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
   gameState.shift = {
@@ -117,6 +124,7 @@ export function beginShift() {
     taskAccepted: false,
     completed: false,
     paid: false,
+    fired: false,
     tomatoesStolen: 0,
     stage: 'commute',
     startedAt: Date.now(),
@@ -170,7 +178,7 @@ export function deliverBox(type) {
 
 export function clockOut() {
   const shift = gameState.shift
-  if (!shift || !shift.completed || shift.paid) return false
+  if (!shift || shift.fired || !shift.completed || shift.paid) return false
   if (!shift.clockedIn || !shift.taskAccepted) return false
   shift.clockedOut = true
   shift.paid = true
@@ -197,18 +205,41 @@ export function canBuy(price) {
 
 export function stealTomato() {
   const shift = gameState.shift
-  if (!shift || !shift.clockedIn || shift.paid) {
+  if (gameState.fired) {
+    return { ok: false, fired: true, reason: 'Voltar para o Taco Bell! Você foi demitido.' }
+  }
+  if (!shift || !shift.clockedIn || shift.paid || shift.fired) {
     return { ok: false, reason: 'Só dá pra roubar tomate durante o expediente.' }
   }
-  shift.tomatoesStolen = Math.max(0, Number(shift.tomatoesStolen) || 0) + 1
+
+  const stolen = Math.max(0, Number(shift.tomatoesStolen) || 0)
+  if (stolen >= MAX_TOMATO_STEALS) {
+    shift.tomatoesStolen = stolen + 1
+    shift.fired = true
+    shift.stage = 'fired'
+    gameState.fired = true
+    saveState()
+    return {
+      ok: false,
+      fired: true,
+      reason: 'Voltar para o Taco Bell! Você foi demitido.'
+    }
+  }
+
+  shift.tomatoesStolen = stolen + 1
   gameState.balance += TOMATO_STEAL_REWARD
   saveState()
   return {
     ok: true,
     amount: TOMATO_STEAL_REWARD,
     balance: gameState.balance,
-    stolen: shift.tomatoesStolen
+    stolen: shift.tomatoesStolen,
+    max: MAX_TOMATO_STEALS
   }
+}
+
+export function isFired() {
+  return Boolean(gameState.fired)
 }
 
 export function buyDrink(drinkId) {

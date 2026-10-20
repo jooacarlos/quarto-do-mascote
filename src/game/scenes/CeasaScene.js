@@ -8,6 +8,7 @@ import WorkPlayer from '../systems/WorkPlayer.js'
 import { addSoftShadow } from '../effects.js'
 import {
   BOX_TYPES,
+  MAX_TOMATO_STEALS,
   TOMATO_STEAL_REWARD,
   acceptTask,
   clockIn,
@@ -43,7 +44,7 @@ const ZONE_LABEL_BY_TYPE = {
   lettuce: 'FOLHAS',
   banana: 'FRUTAS'
 }
-const TOMATO_STASH = { x: 168, y: 676, radius: 105 }
+const TOMATO_STASH = { x: 910, y: 670, radius: 60 }
 
 export default class CeasaScene extends Phaser.Scene {
   constructor() {
@@ -265,15 +266,15 @@ export default class CeasaScene extends Phaser.Scene {
     })
 
     const stack = [
-      { dx: -24, dy: 0 },
-      { dx: 24, dy: 2 },
-      { dx: 0, dy: -32 }
+      { dx: -20, dy: 0 },
+      { dx: 20, dy: 2 },
+      { dx: 0, dy: -30 }
     ]
     for (const slot of stack) {
       const crate = this.add
         .image(x + slot.dx, y + slot.dy, 'ceasa-crate-tomato')
         .setOrigin(0.5, 1)
-        .setDisplaySize(72, 62)
+        .setDisplaySize(66, 58)
         .setDepth(y + slot.dy)
         .setInteractive({ useHandCursor: true })
       crate.on('pointerdown', () => {
@@ -283,7 +284,7 @@ export default class CeasaScene extends Phaser.Scene {
     }
 
     this.add
-      .text(x, y - 104, 'ROUBAR TOMATE', {
+      .text(x, y - 98, 'ROUBAR TOMATE', {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: '12px',
         fontStyle: 'bold',
@@ -382,6 +383,25 @@ export default class CeasaScene extends Phaser.Scene {
   emitMission() {
     const shift = gameState.shift
     if (!shift) return
+    if (gameState.fired || shift.fired) {
+      gameBus.emit(EVENTS.WORK_STATE, {
+        active: true,
+        scene: 'ceasa',
+        phase: 'fired',
+        title: 'Demitido',
+        objective: 'Voltar para o Taco Bell.',
+        progress: null,
+        detail: 'Você roubou tomate demais e foi demitido do CEASA.',
+        clockedIn: shift.clockedIn,
+        completed: false,
+        paid: false,
+        carrying: null,
+        controls: false,
+        stage: 'fired',
+        balance: gameState.balance
+      })
+      return
+    }
     const paid = shift.paid
     let phase = 'clocking_in'
     let title = 'Bater ponto'
@@ -568,6 +588,10 @@ export default class CeasaScene extends Phaser.Scene {
     }
     if (this.time.now < this.stealCooldownUntil) return
     const result = stealTomato()
+    if (result.fired) {
+      this.getFired()
+      return
+    }
     if (!result.ok) {
       gameBus.emit(EVENTS.TOAST, result.reason)
       return
@@ -575,13 +599,36 @@ export default class CeasaScene extends Phaser.Scene {
     this.stealCooldownUntil = this.time.now + 450
     this.soundManager.play('coin')
     this.sparkle(TOMATO_STASH.x, TOMATO_STASH.y - 40, 0xff8b83, 7)
-    gameBus.emit(
-      EVENTS.TOAST,
-      `Tomate roubado! +$${result.amount} no bolso. (${result.stolen} no total)`
-    )
+    const warning =
+      result.stolen >= result.max
+        ? ` (${result.stolen}/${result.max}) Cuidado: mais um roubo e você é demitido!`
+        : ` (${result.stolen}/${result.max} no total)`
+    gameBus.emit(EVENTS.TOAST, `Tomate roubado! +$${result.amount} no bolso.${warning}`)
     this.dialogue.say('stealTomato', { force: true, interrupt: true, priority: 13 })
     this.emitMission()
     this.refreshPrompt()
+  }
+
+  getFired() {
+    if (this.busy) return
+    this.busy = true
+    this.player.setLocked(true)
+    this.soundManager.play('error')
+    this.dialogue.clear()
+    this.dialogue.say('firedFromCeasa', { force: true, interrupt: true, priority: 60 })
+    gameBus.emit(EVENTS.TOAST, 'Você foi pego roubando tomate! Voltar para o Taco Bell!')
+    this.emitMission()
+    this.time.delayedCall(2800, () => {
+      if (!this.sys.isActive()) return
+      this.cameras.main.fadeOut(420, 10, 7, 7)
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.start(SCENES.TRAVEL, {
+          target: SCENES.BEDROOM,
+          from: 'ceasa',
+          area: 'bedroom'
+        })
+      })
+    })
   }
 
   talkToManager() {
@@ -633,6 +680,8 @@ export default class CeasaScene extends Phaser.Scene {
     if (!gameState.shift) return
     if (
       gameState.shift?.clockedIn &&
+      !gameState.shift.fired &&
+      !gameState.fired &&
       !this.player.isCarrying &&
       this.isNear(TOMATO_STASH, TOMATO_STASH.radius)
     ) {
@@ -687,7 +736,11 @@ export default class CeasaScene extends Phaser.Scene {
         !this.player.isCarrying &&
         this.isNear(TOMATO_STASH, TOMATO_STASH.radius)
       ) {
-        next = `E — Roubar tomate (+$${TOMATO_STEAL_REWARD})`
+        const stolen = Number(gameState.shift.tomatoesStolen) || 0
+        next =
+          stolen >= MAX_TOMATO_STEALS
+            ? 'E — Roubar tomate (mais um e você é demitido!)'
+            : `E — Roubar tomate (+$${TOMATO_STEAL_REWARD}) [${stolen}/${MAX_TOMATO_STEALS}]`
       } else if (this.player.isCarrying && zone) {
         next = `E — Entregar em ${zone.label}`
       } else if (this.isNear(CLOCK)) {
