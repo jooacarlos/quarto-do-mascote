@@ -61,12 +61,11 @@ export const DIALOGUES = {
     cooldown: 8000,
     gesture: 'talk'
   },
-  gin: {
+  drinkCrazy: {
     speaker: 'Mbranco',
-    text: 'Gin tônica na mão e a noite só começou.',
-    duration: 3800,
-    priority: 18,
-    cooldown: 6000
+    text: 'Tô ficando louco, boi! Vou chegar nas bbs... e hoje nem o Brunão escapa!',
+    duration: 4600,
+    priority: 20
   },
   vip: {
     speaker: 'Mbranco',
@@ -148,37 +147,37 @@ export const DIALOGUES = {
   },
   dj: {
     speaker: 'Mbranco',
-    text: 'Solta o som, DJ! A pista é nossa, boi.',
-    duration: 3200,
+    text: 'Solta o som, DJ! A Duck tá cheia de bbs e eu quero gin.',
+    duration: 3800,
     priority: 14,
     cooldown: 5000,
     gesture: 'talk'
   },
   npcBia: {
-    speaker: 'Bia',
-    text: 'A pista tá quente, boi! Vem dançar comigo.',
-    duration: 3400,
+    speaker: 'Mbranco',
+    text: 'Bia, essa Duck tá cheia de bbs, boi! E eu só quero tomar gin.',
+    duration: 4000,
     priority: 12,
     cooldown: 6000
   },
   npcJoao: {
-    speaker: 'João caga grosso',
-    text: 'Boiiiii, o gin tá na mesa. Cê demorou, hein!',
-    duration: 3600,
+    speaker: 'Mbranco',
+    text: 'João caga grosso, cê sabia que eu sou bigode? Eu sou o Matheus Branco, o bigode! E essa Duck tá cheia de bbs... quero gin.',
+    duration: 5600,
     priority: 12,
     cooldown: 6000
   },
   npcMiguel: {
-    speaker: 'Miguel bigode',
-    text: 'Camarote liberado. Matheus davi já pediu o champanhe.',
-    duration: 3800,
+    speaker: 'Mbranco',
+    text: 'Miguel bigode, tu é o maior bigode que existe! Eu te admiro demais, boi. A Duck tá cheia de bbs e eu quero gin.',
+    duration: 5600,
     priority: 12,
     cooldown: 6000
   },
   npcMatheus: {
-    speaker: 'Matheus davi',
-    text: 'Gin tônica caprichado, boi. Na casa de vocês não, mas quase.',
-    duration: 3800,
+    speaker: 'Mbranco',
+    text: 'Essa Duck tá cheia de bbs, boi. Me vê um gin que eu quero tomar!',
+    duration: 4200,
     priority: 12,
     cooldown: 6000
   },
@@ -246,11 +245,10 @@ export const DIALOGUES = {
     priority: 20
   },
   managerWorking: {
-    speaker: 'Seu Nilton',
-    text: 'Tô vendo o movimento. Tomate é na área vermelha, folha na verde e banana na frutas.',
-    duration: 4600,
-    priority: 12,
-    cooldown: 9000
+    speaker: 'Mbranco',
+    text: 'Seu Nilton, eu odeio trabalhar, boi. Meu sonho é o Miguel bigode. E se o Lula ganhar, é bye bye Brasil!',
+    duration: 5400,
+    priority: 12
   },
   managerDone: {
     speaker: 'Seu Nilton',
@@ -266,25 +264,28 @@ export const DIALOGUES = {
     cooldown: 8000
   },
   coworkerLia: {
-    speaker: 'Lia',
-    text: 'Hoje o caminhão veio cheio. Confere o setor antes de soltar a caixa, viu?',
-    duration: 4200,
-    priority: 9,
-    cooldown: 9000
+    speaker: 'Mbranco',
+    text: 'Lia, eu odeio trabalhar, mas adoro o Miguel bigode. E se o Lula ganhar, é bye bye Brasil, boi!',
+    duration: 5200,
+    priority: 9
   },
   coworkerDavi: {
-    speaker: 'Davi',
-    text: 'Se errar a área, é só voltar e tentar de novo. Ninguém nasce sabendo.',
-    duration: 4200,
-    priority: 9,
-    cooldown: 9000
+    speaker: 'Mbranco',
+    text: 'Davi, cê sabe que eu odeio trabalhar? Só penso no Miguel bigode. E se o Lula ganhar... bye bye Brasil!',
+    duration: 5400,
+    priority: 9
   },
   coworkerRita: {
-    speaker: 'Rita',
-    text: 'Essa caixa de banana vai em Frutas. As verdes são alfaces, não confunde.',
-    duration: 4600,
-    priority: 9,
-    cooldown: 9000
+    speaker: 'Mbranco',
+    text: 'Rita, eu odeio trabalhar, boi. O Miguel bigode é tudo pra mim. E se o Lula ganhar, é bye bye Brasil!',
+    duration: 5200,
+    priority: 9
+  },
+  stealTomato: {
+    speaker: 'Mbranco',
+    text: 'Ninguém viu nada... tomate no bolso e dinheiro na mão. Odeio trabalhar, boi!',
+    duration: 3600,
+    priority: 12
   },
   ceasaDone: {
     speaker: 'Mbranco',

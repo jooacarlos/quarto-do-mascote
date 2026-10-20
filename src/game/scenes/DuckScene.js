@@ -507,7 +507,7 @@ export default class DuckScene extends Phaser.Scene {
     )
       return
     this.soundManager.play('ui')
-    this.dialogue.say(dialogueId, { interrupt: true, priority: 13 })
+    this.dialogue.say(dialogueId, { force: true, interrupt: true, priority: 20 })
     const baseX = image.scaleX
     const baseY = image.scaleY
     this.tweens.add({
@@ -532,7 +532,7 @@ export default class DuckScene extends Phaser.Scene {
       return
     this.soundManager.play('dance')
     this.soundManager.setClubMode(true)
-    this.dialogue.say('dj', { interrupt: true, priority: 14 })
+    this.dialogue.say('dj', { force: true, interrupt: true, priority: 20 })
     this.sparkleBurst(640, 440, 12, 0xb8a0ff)
     gameBus.emit(EVENTS.TOAST, 'Solta o som, DJ!')
   }
@@ -682,7 +682,7 @@ export default class DuckScene extends Phaser.Scene {
       })
       this.soundManager.play('clink')
       this.time.delayedCall(560, () => this.soundManager.play('sip'))
-      this.dialogue.say('gin', { force: true, interrupt: true, priority: 20 })
+      this.dialogue.say('drinkCrazy', { force: true, interrupt: true, priority: 22 })
       this.sparkleBurst(this.characters.sprite.x + 26, this.characters.sprite.y - 270, 5, 0xffb3d9)
       gameBus.emit(EVENTS.TOAST, `${drinkName} na mão`)
     }

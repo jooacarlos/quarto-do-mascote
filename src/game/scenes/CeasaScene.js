@@ -8,13 +8,15 @@ import WorkPlayer from '../systems/WorkPlayer.js'
 import { addSoftShadow } from '../effects.js'
 import {
   BOX_TYPES,
+  TOMATO_STEAL_REWARD,
   acceptTask,
   clockIn,
   clockOut,
   deliverBox,
   gameState,
   nextBoxType,
-  setShiftStage
+  setShiftStage,
+  stealTomato
 } from '../state.js'
 import {
   addWorkBackground,
@@ -41,6 +43,7 @@ const ZONE_LABEL_BY_TYPE = {
   lettuce: 'FOLHAS',
   banana: 'FRUTAS'
 }
+const TOMATO_STASH = { x: 168, y: 676, radius: 105 }
 
 export default class CeasaScene extends Phaser.Scene {
   constructor() {
@@ -49,6 +52,7 @@ export default class CeasaScene extends Phaser.Scene {
     this.prompt = ''
     this.crateSprites = []
     this.nearestNpc = null
+    this.stealCooldownUntil = 0
   }
 
   init(data = {}) {
@@ -57,6 +61,7 @@ export default class CeasaScene extends Phaser.Scene {
     this.prompt = ''
     this.crateSprites = []
     this.nearestNpc = null
+    this.stealCooldownUntil = 0
   }
 
   preload() {
@@ -92,6 +97,7 @@ export default class CeasaScene extends Phaser.Scene {
     this.buildClock()
     this.buildTruck()
     this.buildZones()
+    this.buildTomatoStash()
     this.buildWorkers()
     this.buildCrateStack()
     this.bindEvents()
@@ -239,6 +245,57 @@ export default class CeasaScene extends Phaser.Scene {
     }
   }
 
+  buildTomatoStash() {
+    const { x, y } = TOMATO_STASH
+    addSoftShadow(this, x, y + 4, 160, 26, 0.28, y - 1)
+
+    const glow = this.add
+      .ellipse(x, y - 24, 150, 70, 0xff8b83, 0.14)
+      .setStrokeStyle(2, 0xff8b83, 0.5)
+      .setDepth(y - 2)
+    this.tweens.add({
+      targets: glow,
+      alpha: { from: 0.4, to: 0.9 },
+      scaleX: { from: 0.97, to: 1.04 },
+      scaleY: { from: 0.97, to: 1.04 },
+      duration: 1200,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    })
+
+    const stack = [
+      { dx: -24, dy: 0 },
+      { dx: 24, dy: 2 },
+      { dx: 0, dy: -32 }
+    ]
+    for (const slot of stack) {
+      const crate = this.add
+        .image(x + slot.dx, y + slot.dy, 'ceasa-crate-tomato')
+        .setOrigin(0.5, 1)
+        .setDisplaySize(72, 62)
+        .setDepth(y + slot.dy)
+        .setInteractive({ useHandCursor: true })
+      crate.on('pointerdown', () => {
+        if (!this.isNear(TOMATO_STASH, TOMATO_STASH.radius)) return this.tooFar()
+        this.stealTomatoes()
+      })
+    }
+
+    this.add
+      .text(x, y - 104, 'ROUBAR TOMATE', {
+        fontFamily: 'Segoe UI, sans-serif',
+        fontSize: '12px',
+        fontStyle: 'bold',
+        color: '#ffd9d4',
+        stroke: '#3a1210',
+        strokeThickness: 4,
+        letterSpacing: 1
+      })
+      .setOrigin(0.5, 1)
+      .setDepth(y + 6)
+  }
+
   buildWorkers() {
     this.manager = this.createWorker({
       name: 'Seu Nilton',
@@ -264,7 +321,7 @@ export default class CeasaScene extends Phaser.Scene {
     })
   }
 
-  createWorker({ name, texture, x, y, height, depth, radius = 70 }) {
+  createWorker({ name, texture, x, y, height, depth, dialogue, radius = 70 }) {
     addSoftShadow(this, x, y - 2, height * 0.36, 24, 0.28, depth - 1)
     const image = this.add
       .image(x, y, texture)
@@ -293,7 +350,7 @@ export default class CeasaScene extends Phaser.Scene {
       repeat: -1,
       ease: 'Sine.easeInOut'
     })
-    return { name, x, y, image, label, radius }
+    return { name, x, y, image, label, radius, dialogue }
   }
 
   buildCrateStack() {
@@ -503,19 +560,46 @@ export default class CeasaScene extends Phaser.Scene {
     this.emitMission()
   }
 
+  stealTomatoes() {
+    if (this.busy) return
+    if (this.player.isCarrying) {
+      gameBus.emit(EVENTS.TOAST, 'Com a caixa na mão não dá pra roubar tomate, boi.')
+      return
+    }
+    if (this.time.now < this.stealCooldownUntil) return
+    const result = stealTomato()
+    if (!result.ok) {
+      gameBus.emit(EVENTS.TOAST, result.reason)
+      return
+    }
+    this.stealCooldownUntil = this.time.now + 450
+    this.soundManager.play('coin')
+    this.sparkle(TOMATO_STASH.x, TOMATO_STASH.y - 40, 0xff8b83, 7)
+    gameBus.emit(
+      EVENTS.TOAST,
+      `Tomate roubado! +$${result.amount} no bolso. (${result.stolen} no total)`
+    )
+    this.dialogue.say('stealTomato', { force: true, interrupt: true, priority: 13 })
+    this.emitMission()
+    this.refreshPrompt()
+  }
+
   talkToManager() {
     const shift = gameState.shift
     if (!shift) return
     if (!shift.clockedIn) {
       this.dialogue.say('clockBeforeTask', { interrupt: true, priority: 12 })
+      this.sayManagerRant()
       return
     }
     if (shift.paid) {
       this.dialogue.say('managerPaid', { interrupt: true, priority: 10 })
+      this.sayManagerRant()
       return
     }
     if (shift.completed) {
       this.dialogue.say('managerDone', { interrupt: true, priority: 16 })
+      this.sayManagerRant()
       return
     }
     if (!shift.taskAccepted) {
@@ -523,6 +607,7 @@ export default class CeasaScene extends Phaser.Scene {
       setShiftStage('working')
       this.soundManager.play('ui')
       this.dialogue.say('managerTask', { force: true, interrupt: true, priority: 25 })
+      this.sayManagerRant()
       gameBus.emit(
         EVENTS.TOAST,
         'Tarefa recebida: 8 caixas. Pegue no caminhão e entregue no setor certo.'
@@ -530,29 +615,40 @@ export default class CeasaScene extends Phaser.Scene {
       this.emitMission()
       return
     }
-    this.dialogue.say('managerWorking', { interrupt: true, priority: 12 })
+    this.dialogue.say('managerWorking', { force: true, interrupt: true, priority: 12 })
+  }
+
+  sayManagerRant() {
+    this.dialogue.say('managerWorking', { priority: 5 })
   }
 
   talkToCoworker(coworker) {
     this.soundManager.play('ui')
-    this.dialogue.say(coworker.dialogue, { interrupt: true, priority: 11 })
+    this.dialogue.say(coworker.dialogue, { force: true, interrupt: true, priority: 11 })
     this.sparkle(coworker.x, coworker.y - 130, 0xffe6a8, 5)
   }
 
   interactNearest() {
     if (this.busy) return
     if (!gameState.shift) return
+    if (
+      gameState.shift?.clockedIn &&
+      !this.player.isCarrying &&
+      this.isNear(TOMATO_STASH, TOMATO_STASH.radius)
+    ) {
+      return this.stealTomatoes()
+    }
     const zone = this.nearestZone()
     if (this.player.isCarrying && zone) return this.useZone(zone)
 
     if (this.isNear(CLOCK)) return this.useClock()
     if (this.isNear(MANAGER)) return this.talkToManager()
 
-    if (!this.player.isCarrying && this.isNear(TRUCK)) return this.pickupBox()
-
     for (const coworker of this.coworkers) {
       if (this.isNear(coworker)) return this.talkToCoworker(coworker)
     }
+
+    if (!this.player.isCarrying && this.isNear(TRUCK)) return this.pickupBox()
 
     if (this.isNear(TRUCK)) {
       const type = nextBoxType()
@@ -586,18 +682,24 @@ export default class CeasaScene extends Phaser.Scene {
     let next = ''
     if (gameState.shift && !gameState.shift.paid) {
       const zone = this.nearestZone()
-      if (this.player.isCarrying && zone) {
+      if (
+        gameState.shift?.clockedIn &&
+        !this.player.isCarrying &&
+        this.isNear(TOMATO_STASH, TOMATO_STASH.radius)
+      ) {
+        next = `E — Roubar tomate (+$${TOMATO_STEAL_REWARD})`
+      } else if (this.player.isCarrying && zone) {
         next = `E — Entregar em ${zone.label}`
       } else if (this.isNear(CLOCK)) {
         next = gameState.shift.completed ? 'E — Bater saída' : 'E — Bater ponto'
       } else if (this.isNear(MANAGER)) {
         next = 'E — Falar com Seu Nilton'
-      } else if (!this.player.isCarrying && this.isNear(TRUCK)) {
-        next = 'E — Pegar caixa'
       } else {
         const coworker = this.coworkers.find((item) => this.isNear(item))
         if (coworker) {
           next = `E — Conversar com ${coworker.name}`
+        } else if (!this.player.isCarrying && this.isNear(TRUCK)) {
+          next = 'E — Pegar caixa'
         } else if (this.player.isCarrying && this.isNear(TRUCK)) {
           next = 'Leve a caixa até o setor correto'
         } else if (zone) {

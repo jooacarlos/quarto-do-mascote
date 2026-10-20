@@ -4,6 +4,7 @@ export const SAVE_KEY = 'mbranco.ceasa.save.v1'
 export const SALARY = 150
 export const BOXES_REQUIRED = 8
 export const BOX_REWARD_HINT = 'Descarregue 8 caixas do caminhão e leve cada uma ao setor indicado.'
+export const TOMATO_STEAL_REWARD = 6
 
 export const BOX_TYPES = {
   tomato: { label: 'Tomates', zone: 'tomatoes', texture: 'ceasa-crate-tomato' },
@@ -60,6 +61,7 @@ function normalizeShift(shift) {
     taskAccepted: Boolean(shift.taskAccepted),
     completed: Boolean(shift.completed),
     paid: Boolean(shift.paid),
+    tomatoesStolen: Math.max(0, Number(shift.tomatoesStolen) || 0),
     stage: typeof shift.stage === 'string' ? shift.stage : 'commute',
     startedAt: Number(shift.startedAt) || Date.now(),
     paidAt: Number(shift.paidAt) || null
@@ -115,6 +117,7 @@ export function beginShift() {
     taskAccepted: false,
     completed: false,
     paid: false,
+    tomatoesStolen: 0,
     stage: 'commute',
     startedAt: Date.now(),
     paidAt: null
@@ -190,6 +193,22 @@ export function abandonShift() {
 
 export function canBuy(price) {
   return Number.isFinite(price) && price >= 0 && gameState.balance >= price
+}
+
+export function stealTomato() {
+  const shift = gameState.shift
+  if (!shift || !shift.clockedIn || shift.paid) {
+    return { ok: false, reason: 'Só dá pra roubar tomate durante o expediente.' }
+  }
+  shift.tomatoesStolen = Math.max(0, Number(shift.tomatoesStolen) || 0) + 1
+  gameState.balance += TOMATO_STEAL_REWARD
+  saveState()
+  return {
+    ok: true,
+    amount: TOMATO_STEAL_REWARD,
+    balance: gameState.balance,
+    stolen: shift.tomatoesStolen
+  }
 }
 
 export function buyDrink(drinkId) {
