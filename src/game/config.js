@@ -6,6 +6,10 @@ import StreetScene from './scenes/StreetScene.js'
 import BusScene from './scenes/BusScene.js'
 import CeasaFacadeScene from './scenes/CeasaFacadeScene.js'
 import CeasaScene from './scenes/CeasaScene.js'
+import MuseumFacadeScene from './scenes/MuseumFacadeScene.js'
+import MuseumScene from './scenes/MuseumScene.js'
+import HistoryBoardScene from './scenes/HistoryBoardScene.js'
+import MuseumGalleryScene from './scenes/MuseumGalleryScene.js'
 import { GAME_HEIGHT, GAME_WIDTH } from './constants.js'
 
 export function createGame(parent) {
@@ -26,6 +30,18 @@ export function createGame(parent) {
       width: GAME_WIDTH,
       height: GAME_HEIGHT
     },
-    scene: [BedroomScene, DuckScene, TravelScene, StreetScene, BusScene, CeasaFacadeScene, CeasaScene]
+    scene: [
+      BedroomScene,
+      DuckScene,
+      TravelScene,
+      StreetScene,
+      BusScene,
+      CeasaFacadeScene,
+      CeasaScene,
+      MuseumFacadeScene,
+      MuseumScene,
+      HistoryBoardScene,
+      MuseumGalleryScene
+    ]
   })
 }

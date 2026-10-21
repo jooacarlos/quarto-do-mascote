@@ -27,6 +27,7 @@ export default class BedroomScene extends Phaser.Scene {
   init(data = {}) {
     this.arrivedFromDuck = data.from === 'duck'
     this.arrivedFromWork = data.from === 'ceasa'
+    this.arrivedFromMuseum = data.from === 'museum'
     this.busy = false
     this.traveling = false
   }
@@ -73,6 +74,7 @@ export default class BedroomScene extends Phaser.Scene {
     this.handleRequestClub = () => this.travelToDuck()
     this.handleRequestTalk = () => this.triggerTalk()
     this.handleRequestWork = () => this.startWork()
+    this.handleRequestMuseum = () => this.travelToMuseum()
     this.traveling = false
     this.handleRequestInteract = (action) => {
       if (action === 'bed') this.triggerBed()
@@ -88,6 +90,7 @@ export default class BedroomScene extends Phaser.Scene {
     gameBus.on(EVENTS.REQUEST_CLUB, this.handleRequestClub)
     gameBus.on(EVENTS.REQUEST_TALK, this.handleRequestTalk)
     gameBus.on(EVENTS.REQUEST_WORK, this.handleRequestWork)
+    gameBus.on(EVENTS.REQUEST_MUSEUM, this.handleRequestMuseum)
     gameBus.on(EVENTS.REQUEST_INTERACT, this.handleRequestInteract)
     gameBus.on(EVENTS.TOGGLE_SOUND, this.handleToggleSound)
     this.events.once('shutdown', this.shutdown, this)
@@ -105,8 +108,13 @@ export default class BedroomScene extends Phaser.Scene {
           EVENTS.TOAST,
           gameState.shift?.kicked
             ? 'Mandado embora do CEASA. Volte quando quiser!'
-            : 'De volta do CEASA. Salário no bolso!'
+            : 'De volta do CEASA. Salǭrio no bolso!'
         )
+      )
+    }
+    if (this.arrivedFromMuseum) {
+      this.time.delayedCall(700, () =>
+        gameBus.emit(EVENTS.TOAST, 'De volta do Museu do Branco.')
       )
     }
 
@@ -325,6 +333,28 @@ export default class BedroomScene extends Phaser.Scene {
     gameBus.emit(EVENTS.TOAST, 'Mbranco puxando assunto')
   }
 
+  travelToMuseum() {
+    if (this.busy || this.traveling || this.characters?.state === 'walking') return
+    if (!this.sys.isActive()) return
+    this.busy = true
+    this.traveling = true
+    this.characters?.idle()
+    this.dialogue?.clear()
+    gameBus.emit(EVENTS.TRAVEL_STATE, {
+      phase: 'leaving',
+      from: 'bedroom',
+      target: 'museum'
+    })
+    gameBus.emit(EVENTS.TOAST, 'Indo para o Museu do Branco...')
+    this.time.delayedCall(320, () => {
+      if (!this.sys.isActive()) return
+      this.cameras.main.fadeOut(360, 8, 6, 10)
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.start(SCENES.MUSEUM_FACADE, { from: 'bedroom' })
+      })
+    })
+  }
+
   travelToDuck() {
     if (this.busy || this.traveling || this.characters?.state === 'walking') return
     this.busy = true
@@ -466,6 +496,7 @@ export default class BedroomScene extends Phaser.Scene {
     gameBus.off(EVENTS.REQUEST_CLUB, this.handleRequestClub)
     gameBus.off(EVENTS.REQUEST_TALK, this.handleRequestTalk)
     gameBus.off(EVENTS.REQUEST_WORK, this.handleRequestWork)
+    gameBus.off(EVENTS.REQUEST_MUSEUM, this.handleRequestMuseum)
     gameBus.off(EVENTS.REQUEST_INTERACT, this.handleRequestInteract)
     gameBus.off(EVENTS.TOGGLE_SOUND, this.handleToggleSound)
     this.interactives?.destroy()

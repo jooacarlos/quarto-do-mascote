@@ -1512,3 +1512,38 @@ button {
   }
 }
 .guest-count { margin-left: 8px; color: rgba(255, 230, 190, 0.7); font-size: 0.9em; font-weight: 600; }
+
+/* Museum HUD */
+.game-frame.is-museum {
+  border-color: rgba(143, 232, 255, 0.34);
+  box-shadow:
+    0 30px 100px rgba(10, 42, 56, 0.5),
+    0 8px 30px rgba(0, 0, 0, 0.42),
+    inset 0 0 0 1px rgba(196, 244, 255, 0.07);
+}
+
+.game-frame.is-museum .venue-name {
+  color: #e1faff;
+  text-shadow: 0 0 14px rgba(143, 232, 255, 0.5);
+}
+
+.action-button.museum-button {
+  border-color: rgba(143, 232, 255, 0.42);
+  background: rgba(10, 30, 40, 0.7);
+}
+
+.action-button.museum-button:hover:not(:disabled) {
+  background: rgba(17, 54, 68, 0.86);
+}
+
+@media (max-width: 430px) {
+  .action-button.museum-button {
+    width: auto;
+    padding: 0 12px;
+    border-radius: 999px;
+  }
+
+  .action-button.museum-button span {
+    display: inline;
+  }
+}

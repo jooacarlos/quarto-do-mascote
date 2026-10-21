@@ -7,6 +7,8 @@
   REQUEST_INTERACT: 'ui:request-interact',
   REQUEST_TALK: 'ui:request-talk',
   REQUEST_WORK: 'ui:request-work',
+  REQUEST_MUSEUM: 'ui:request-museum',
+  REQUEST_MUSEUM_EXIT: 'ui:request-museum-exit',
   REQUEST_WORK_INTERACT: 'ui:request-work-interact',
   REQUEST_WORK_RETURN: 'ui:request-work-return',
   WORK_MOVE: 'ui:work-move',

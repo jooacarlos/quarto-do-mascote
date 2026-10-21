@@ -75,7 +75,9 @@ const unsubscribers = [
           ? 'bedroom'
           : payload.target === 'duck'
             ? 'duck'
-            : 'work'
+            : payload.target === 'museum'
+              ? 'museum'
+              : 'work'
       const targetArea =
         targetScene === 'bedroom'
           ? 'bedroom'
@@ -83,9 +85,11 @@ const unsubscribers = [
             ? world.value.area === 'bedroom'
               ? 'dance'
               : world.value.area
-            : payload.from === 'ceasa'
-              ? 'ceasa'
-              : 'street'
+            : targetScene === 'museum'
+              ? 'museum-facade'
+              : payload.from === 'ceasa'
+                ? 'ceasa'
+                : 'street'
       world.value = {
         scene: targetScene,
         area: targetArea,
@@ -96,7 +100,9 @@ const unsubscribers = [
           ? 'to-bedroom'
           : payload.target === 'duck'
             ? 'to-duck'
-            : 'to-work'
+            : payload.target === 'museum'
+              ? 'to-museum'
+              : 'to-work'
       areaTransition.value = true
       closeShop()
     }
@@ -127,13 +133,26 @@ const unsubscribers = [
 
 const isDuck = computed(() => world.value.scene === 'duck')
 const isWork = computed(() => world.value.scene === 'work')
+const isMuseum = computed(() => world.value.scene === 'museum')
 const isHome = computed(() => world.value.scene === 'bedroom')
 const areaLabel = computed(() => AREA_LABELS[world.value.area] ?? 'Duck')
 const portraitTitle = computed(() =>
-  isDuck.value ? 'Duck Nightclub' : isWork.value ? 'CEASA' : 'Quarto do Mascote'
+  isDuck.value
+    ? 'Duck Nightclub'
+    : isWork.value
+      ? 'CEASA'
+      : isMuseum.value
+        ? 'Museu do Branco'
+        : 'Quarto do Mascote'
 )
 const portraitKicker = computed(() =>
-  isDuck.value ? 'balada virtual' : isWork.value ? 'trabalho virtual' : 'mascote virtual'
+  isDuck.value
+    ? 'balada virtual'
+    : isWork.value
+      ? 'trabalho virtual'
+      : isMuseum.value
+        ? 'exposição virtual'
+        : 'mascote virtual'
 )
 const isActive = computed(
   () => characterState.value !== 'idle' || world.value.traveling || areaTransition.value
@@ -144,9 +163,17 @@ const statusText = computed(() => {
   if (world.value.traveling) {
     if (travelDirection.value === 'to-bedroom') return 'Voltando para o quarto...'
     if (travelDirection.value === 'to-work') return 'Indo para o trabalho...'
+    if (travelDirection.value === 'to-museum') return 'Indo para o Museu do Branco...'
     return 'Indo para a Duck...'
   }
   if (areaTransition.value) return 'Mudando de área...'
+
+  if (isMuseum.value) {
+    if (world.value.area === 'museum-history') return 'HistoryBoard do Paineiras'
+    if (world.value.area === 'museum-gallery') return 'Galeria de Amigos'
+    if (world.value.area === 'museum-facade') return 'Na entrada do Museu do Branco'
+    return 'Explorando o Museu do Branco'
+  }
 
   if (isWork.value) {
     return workState.value?.title ?? 'Trabalhando no CEASA'
@@ -172,6 +199,15 @@ const statusText = computed(() => {
 
 const hintText = computed(() => {
   if (world.value.traveling) return 'Preparando a próxima parada...'
+  if (isMuseum.value) {
+    if (world.value.area === 'museum-history') {
+      return 'Espaço pausa • setas navegam • Esc sai da HistoryBoard'
+    }
+    if (world.value.area === 'museum-gallery') {
+      return 'Clique em um quadro para ampliar • Esc volta ao museu'
+    }
+    return 'WASD/setas ou toque no chão • E para interagir'
+  }
   if (isWork.value) {
     if (workPrompt.value) return workPrompt.value
     return workState.value?.detail ?? 'WASD, setas ou o direcional para andar.'
@@ -233,6 +269,16 @@ const workDisabled = computed(
   () => !ready.value || isWork.value || isDuck.value || world.value.traveling || areaTransition.value
 )
 
+const museumDisabled = computed(
+  () =>
+    !ready.value ||
+    isWork.value ||
+    isDuck.value ||
+    isMuseum.value ||
+    world.value.traveling ||
+    areaTransition.value
+)
+
 const contextDisabled = computed(() => {
   if (!contextAction.value || travelDisabled.value) return true
   if (characterState.value === 'dancing' && contextAction.value.id !== 'dance') return true
@@ -278,6 +324,17 @@ function requestWork() {
   if (workDisabled.value) return
   closeShop()
   gameBus.emit(EVENTS.REQUEST_WORK)
+}
+
+function requestMuseum() {
+  if (museumDisabled.value) return
+  closeShop()
+  gameBus.emit(EVENTS.REQUEST_MUSEUM)
+}
+
+function requestMuseumExit() {
+  if (!ready.value || world.value.traveling) return
+  gameBus.emit(EVENTS.REQUEST_MUSEUM_EXIT)
 }
 
 function requestReturn() {
@@ -401,7 +458,7 @@ onBeforeUnmount(() => {
       <span class="portrait-title">{{ portraitTitle }}</span>
     </header>
 
-    <section class="game-frame" :class="{ 'is-duck': isDuck, 'is-work': isWork, 'has-dialogue': dialogue }" aria-label="Aventura do mascote">
+    <section class="game-frame" :class="{ 'is-duck': isDuck, 'is-work': isWork, 'is-museum': isMuseum, 'has-dialogue': dialogue }" aria-label="Aventura do mascote">
       <GameCanvas />
 
       <div class="hud">
@@ -411,11 +468,11 @@ onBeforeUnmount(() => {
         </div>
 
         <div v-if="world.area !== 'bus'" class="venue-badge" aria-hidden="true">
-          <span class="venue-kicker">{{ isDuck ? 'Duck Nightclub' : isWork ? 'CEASA' : 'mascote virtual' }}</span>
-          <span class="venue-name">{{ isDuck || isWork ? areaLabel : 'Quarto do Mascote' }}</span>
+          <span class="venue-kicker">{{ isDuck ? 'Duck Nightclub' : isWork ? 'CEASA' : isMuseum ? 'Museu do Branco' : 'mascote virtual' }}</span>
+          <span class="venue-name">{{ isDuck || isWork || isMuseum ? areaLabel : 'Quarto do Mascote' }}</span>
         </div>
 
-        <div class="wallet-chip" aria-label="Saldo virtual">
+        <div v-if="!isMuseum" class="wallet-chip" aria-label="Saldo virtual">
           <span>Saldo</span>
           <strong>$ {{ gameState.balance }}</strong>
         </div>
@@ -501,6 +558,25 @@ onBeforeUnmount(() => {
                 />
               </svg>
               <span>Ir Trabalhar</span>
+            </button>
+
+            <button
+              class="action-button ghost museum-button"
+              type="button"
+              :disabled="museumDisabled"
+              @click="requestMuseum"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M3 9.5 12 4l9 5.5M5 10.5h14M6.5 10.5V19M10 10.5V19M14 10.5V19M17.5 10.5V19M4 20h16"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+              <span>Museu</span>
             </button>
 
             <button
@@ -643,6 +719,27 @@ onBeforeUnmount(() => {
               <span>Conversar</span>
             </button>
           </template>
+
+          <template v-else-if="isMuseum">
+            <button
+              class="action-button ghost"
+              type="button"
+              :disabled="world.traveling"
+              @click="requestMuseumExit"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M4 11.4 12 4l8 7.4M6.5 10v9h11v-9M10 19v-5h4v5"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+              <span>{{ world.area === 'museum-history' || world.area === 'museum-gallery' ? 'Museu' : 'Quarto' }}</span>
+            </button>
+          </template>
         </div>
 
         <nav v-if="isDuck && !world.traveling" class="area-nav" aria-label="Áreas da Duck">
@@ -659,7 +756,7 @@ onBeforeUnmount(() => {
           </button>
         </nav>
 
-        <p class="hint">{{ hintText }}</p>
+        <p v-if="!isMuseum" class="hint">{{ hintText }}</p>
 
         <div v-if="workControlsVisible" class="work-controls" aria-label="Controles de movimento">
           <div class="dpad">
@@ -782,6 +879,6 @@ onBeforeUnmount(() => {
       </Transition>
     </section>
 
-    <p class="portrait-tip">{{ hintText }}</p>
+    <p v-if="!isMuseum" class="portrait-tip">{{ hintText }}</p>
   </main>
 </template>

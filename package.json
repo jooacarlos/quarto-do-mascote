@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "assets": "node scripts/process-assets.mjs && node scripts/process-v2-assets.mjs && node scripts/process-ceasa-assets.mjs",
+    "assets": "node scripts/process-assets.mjs && node scripts/process-v2-assets.mjs && node scripts/process-ceasa-assets.mjs && node scripts/process-museum-assets.mjs",
     "deploy": "npm run build && netlify deploy --prod --dir=dist --no-build"
   },
   "dependencies": {
@@ -24,5 +24,16 @@
     "type": "git",
     "url": "git+https://github.com/jooacarlos/quarto-do-mascote.git"
   },
-  "homepage": "https://quarto-do-mascote.netlify.app"
+  "homepage": "https://quarto-do-mascote.netlify.app",
+  "description": "Jogo de mascote virtual 2D no navegador, feito com Vue 3, Vite e Phaser 3. O Mbranco conversa, pisca, acena, descansa no quarto e pode ir para a balada Duck, onde dança, bebe um gin e curte o camarote.",
+  "main": "vite.config.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jooacarlos/quarto-do-mascote/issues"
+  }
 }

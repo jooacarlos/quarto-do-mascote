@@ -7,7 +7,11 @@ export const SCENES = {
   STREET: 'StreetScene',
   BUS: 'BusScene',
   CEASA_FACADE: 'CeasaFacadeScene',
-  CEASA: 'CeasaScene'
+  CEASA: 'CeasaScene',
+  MUSEUM_FACADE: 'MuseumFacadeScene',
+  MUSEUM: 'MuseumScene',
+  HISTORY_BOARD: 'HistoryBoardScene',
+  MUSEUM_GALLERY: 'MuseumGalleryScene'
 }
 export const SCENE_KEY = SCENES.BEDROOM
 export const ASSET_BASE = `${import.meta.env.BASE_URL}assets/`
@@ -33,5 +37,10 @@ export const AREA_LABELS = {
   street: 'Rua / Ponto',
   bus: 'Ônibus',
   'ceasa-facade': 'CEASA',
-  ceasa: 'Galpão CEASA'
+  ceasa: 'Galp�o CEASA',
+  museum: 'Museu do Branco',
+  'museum-facade': 'Entrada do Museu',
+  'museum-lobby': 'Paineiras',
+  'museum-gallery': 'Galeria de Amigos',
+  'museum-history': 'HistoryBoard'
 }

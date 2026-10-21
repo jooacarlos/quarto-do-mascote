@@ -11,6 +11,11 @@ class SoundManager {
     this.destroyed = false
     this.voiceAudio = null
     this.voiceKey = null
+    this.storyAudio = null
+    this.storyKey = null
+    this.storyVolume = 0.9
+    this.storyCallbacks = null
+    this.storyResumeOnVisible = false
     this.handleVisibility = this.handleVisibility.bind(this)
     document.addEventListener('visibilitychange', this.handleVisibility)
   }
@@ -38,6 +43,9 @@ class SoundManager {
     this.muted = muted
     if (this.master) {
       this.master.gain.setValueAtTime(muted ? 0 : 0.16, this.context.currentTime)
+    }
+    if (this.storyAudio) {
+      this.storyAudio.volume = muted ? 0 : this.storyVolume
     }
     if (muted) {
       this.stopBeat()
@@ -190,6 +198,91 @@ class SoundManager {
     return true
   }
 
+  playStory(file, options = {}) {
+    if (this.destroyed) return false
+    this.stopStory()
+    const audio = new Audio(`${AUDIO_BASE}museum/${file}`)
+    this.storyVolume = Math.max(0, Math.min(1, Number(options.volume ?? 0.9) || 0.9))
+    audio.volume = this.muted ? 0 : this.storyVolume
+    audio.preload = 'auto'
+    this.storyAudio = audio
+    this.storyKey = file
+    this.storyCallbacks = options
+
+    const notifyTime = () => {
+      if (this.storyAudio !== audio) return
+      options.onTime?.(
+        audio.currentTime || 0,
+        audio.duration || Number(options.duration) || 0
+      )
+    }
+
+    audio.addEventListener('timeupdate', notifyTime)
+    audio.addEventListener('loadedmetadata', notifyTime)
+    audio.addEventListener(
+      'ended',
+      () => {
+        if (this.storyAudio !== audio) return
+        this.storyAudio = null
+        this.storyKey = null
+        this.storyCallbacks = null
+        options.onEnded?.()
+      },
+      { once: true }
+    )
+    audio.addEventListener(
+      'error',
+      () => {
+        if (this.storyAudio === audio) {
+          this.storyAudio = null
+          this.storyKey = null
+          this.storyCallbacks = null
+        }
+        options.onError?.()
+      },
+      { once: true }
+    )
+
+    const promise = audio.play()
+    if (promise?.catch) promise.catch(() => options.onError?.())
+    return true
+  }
+
+  pauseStory() {
+    if (!this.storyAudio) return false
+    try {
+      this.storyAudio.pause()
+    } catch {
+      // audio indisponivel
+    }
+    return true
+  }
+
+  resumeStory() {
+    if (!this.storyAudio) return false
+    const promise = this.storyAudio.play()
+    if (promise?.catch) promise.catch(() => {})
+    return true
+  }
+
+  stopStory() {
+    if (!this.storyAudio) return
+    try {
+      this.storyAudio.pause()
+      this.storyAudio.currentTime = 0
+    } catch {
+      // audio indisponivel
+    }
+    this.storyAudio = null
+    this.storyKey = null
+    this.storyCallbacks = null
+    this.storyResumeOnVisible = false
+  }
+
+  isStoryPlaying() {
+    return Boolean(this.storyAudio && !this.storyAudio.paused && !this.storyAudio.ended)
+  }
+
   stopVoice() {
     if (!this.voiceAudio) return
     try {
@@ -225,8 +318,16 @@ class SoundManager {
     if (document.visibilityState === 'hidden') {
       this.stopBeat()
       this.stopVoice()
+      if (this.isStoryPlaying()) {
+        this.storyResumeOnVisible = true
+        this.storyAudio?.pause()
+      }
       if (this.context) this.context.suspend()
       return
+    }
+    if (this.storyResumeOnVisible && this.storyAudio) {
+      this.storyResumeOnVisible = false
+      this.resumeStory()
     }
     if (this.context && !this.muted) {
       this.context.resume()
@@ -238,6 +339,7 @@ class SoundManager {
     this.destroyed = true
     this.stopBeat()
     this.stopVoice()
+    this.stopStory()
     document.removeEventListener('visibilitychange', this.handleVisibility)
     if (this.context) {
       this.context.close()
